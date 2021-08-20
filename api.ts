@@ -3,35 +3,6 @@
  */
 //% color="#b3687d" weight=100 icon="\uf1ec" block="Soundtrack"
 namespace soundtrack {
-
-    //%
-    export class Motif {
-        constructor() {
-            return {}
-        }
-    }
-
-    export class Song {
-        constructor() {
-            return undefined;
-        }
-
-        //% blockId=soundtrack_set_volume
-        //% block="set volume to $vol"
-        //% group="Play"
-        public setVolume(vol: number) {
-
-        }
-
-        //% blockId=soundtrack_set_temp
-        //% block="set tempo to $tempo"
-        //% group="Song"
-        public setTempo(tempo: number) {
-
-        }
-    }
-
-
     export enum TrackRole {
         //% block="Bass"
         Bass,
@@ -55,6 +26,7 @@ namespace soundtrack {
         //% block="Very Quickly"
         VeryQuickly
     }
+
     export enum TrackPlayType {
         //% block="Loop"
         Loop,
@@ -84,16 +56,14 @@ namespace soundtrack {
     //% block="play soundtrack $name"
     //% group="Play"
     export function playSoundtrack(name: string): void {
-
+        playSoundtrackSecret(name);
     }
 
     //% block="stop soundtrack"
     //% group="Play"
     export function stopSountrack() {
-
+        stopSoundtrackSecret();
     }
-
-
 
 
     /***********************************
@@ -107,8 +77,7 @@ namespace soundtrack {
     //% block
     //% group="Compose"
     export function motif(img: Image): Motif {
-        sprites.create(img, 0)
-        return new Motif();
+        return soundtrack.createMotif(img);
     }
 
 
@@ -117,7 +86,7 @@ namespace soundtrack {
     //% speed.shadow="soundtrack_speed_picker"
     //% group="Compose"
     export function playMotif(motif: Motif, speed: PlaySpeed) {
-
+        registerMotif(motif, speed);
     }
 
 
@@ -131,15 +100,18 @@ namespace soundtrack {
     //% block="soundtrack $name"
     //% group="Song"
     export function setSoundtrack(name: string, handler: () => void) {
+        registerSoundtrack(name)
 
+        handler();//VVN TODO should i be calling this? I think so....
     }
 
 
     //% blockId=soundtrack_set_key
     //% block="set key $key"
+    //% key.fieldEditor="note"
     //% group="Song"
     export function setSountrackKey(key: number) {
-
+        setSoundtrackKeySecret(key)
     }
 
 
@@ -148,41 +120,25 @@ namespace soundtrack {
      *           TRACK
      ***********************************/
 
-    //% block="set track $name"
+    //% block="set track $name $instrument as $role $type"
     //% handlerStatement
-    //% group="Track"
-    export function setTrack(name: string, handler: ()=>void) {
-
-    }
-
-
-    //% block="set track play type to $type"
-    //% type.shadow=soundtrack_track_play_type
-    //% group="Track"
-    export function setTrackPlaybackType(type: number) {
-
-    }
-
-    //% block="set track instrument to $instrument"
     //% instrument.shadow=soundtrack_instrument_picker
-    //% group="Track"
-    export function setTrackInstrument(instrument: number) {
-
-    }
-
-    //% blockId=soundtrack_role_picker
-    //% block="set track role $role"
     //% role.shadow=soundtrack_track_role_picker
+    //% type.shadow=soundtrack_track_play_type
+    //% expandableArgumentMode="toggle"
     //% group="Track"
-    export function setRole(role: number) {
-
-    }
-
-    export function setOctave(octave: number) {
-
+    export function setTrack(name: string, instrument: number, role: number, type: number, handler: ()=>void) {
+        registerTrack(name, instrument, role, type);
+        handler();
     }
 
 
+    //% blockId=soundtrack_set_volume
+    //% block="set track volume percent to $vol"
+    //% group="Track"
+    export function setTrackVolume(vol: number) {
+        setTrackVolumeSecret(vol);
+    }
 
 
     /***********************************

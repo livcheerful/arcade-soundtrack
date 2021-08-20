@@ -10,7 +10,8 @@
         "README.md",
         "assets.json",
         "soundtrack.ts",
-        "api.ts"
+        "api.ts",
+        "envelopes.ts"
     ],
     "testFiles": [
         "test.ts"
