@@ -11,7 +11,8 @@
         "assets.json",
         "soundtrack.ts",
         "api.ts",
-        "envelopes.ts"
+        "envelopes.ts",
+        "musicTheory.ts"
     ],
     "testFiles": [
         "test.ts"

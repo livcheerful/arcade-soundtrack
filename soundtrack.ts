@@ -123,8 +123,8 @@ namespace soundtrack {
 // DFAC (Dm7) -> DFGB (Gm7)-> (Cm7) 
 
 
-
     export class Track {
+        parent: Soundtrack
         motifs: MotifPlayback[];
         volume: number;
 
@@ -139,7 +139,9 @@ namespace soundtrack {
 
         noteOptions: number[]; // Array of frequencies.
 
-        constructor(instrument: InstrumentType, role: TrackRole, pType: TrackPlayType) {
+        constructor(parent: Soundtrack, instrument: InstrumentType, role: TrackRole, pType: TrackPlayType) {
+            this.parent = parent
+            
             this.instrument = instrument;
             this.role = role;
             this.playbackType = pType;
@@ -153,17 +155,23 @@ namespace soundtrack {
             this.generateNoteOptions();
         }
 
-        generateNoteOptions() {// TODO set this when we set the key...and mood?
-            this.noteOptions = [Note.C, Note.E, Note.G, Note.Bb];
-            if (this.role == TrackRole.Bass) {
-                this.noteOptions = [Note.C3, Note.E3, Note.G3, Note.Bb3];
+        generateNoteOptions(chord?: musicUtils.Chord) {// TODO set this when we set the key...and mood?
+            if (!chord) {
+                this.noteOptions = [Note.C, Note.E, Note.G, Note.Bb];
+            } else {
+                switch(this.role) {
+                    case TrackRole.Bass: this.noteOptions = chord.getNotes(1, 2);
+                    case TrackRole.Melody: this.noteOptions = chord.getNotes(4, 2);
+                    case TrackRole.Flavor: this.noteOptions = chord.getNotes(2, 5);
+                    case TrackRole.Rhythm: this.noteOptions = chord.getNotes(4, 1); // VVN TODO RHYTHM
+                }
             }
         }
 
         getNoteFreqFromOffset(offset: number) {
-            if (this.role == TrackRole.Bass) {
-                return this.noteOptions[Math.floor(offset / this.noteOptions.length)]
-            }
+            // if (this.role == TrackRole.Bass) {
+            //     return this.noteOptions[Math.floor(offset / this.noteOptions.length)]
+            // }
 
             return this.noteOptions[ offset % this.noteOptions.length]
         }
@@ -252,19 +260,37 @@ namespace soundtrack {
     export class Soundtrack {
         tracks: {[key: string]:Track};
         trackNames: string[];
+
         key: number;
         mood: MusicMood;
+        beatVal: BeatFraction;
+        beatsPMeasure: number;
+
+        chords: musicUtils.Chord[];
+        nextChordChangeTime: number;
+        currentChordIdx: number;
 
         constructor() {
             this.trackNames = [];
             this.tracks = {};
             this.mood = MusicMood.Chill;
+            this.generateChordsForMood();
+            this.generateTimeSigForMood();
+
+            this.beatVal = BeatFraction.Quarter;
+            this.beatsPMeasure = 4;
+
+            this.currentChordIdx = -1;
+            this.nextChordChangeTime = 0;
         }
 
         reset() {
             for (let name of this.trackNames) {
                 this.tracks[name].reset();
             }
+
+            this.currentChordIdx = -1;
+            this.nextChordChangeTime = 0;
         }
 
         addTrack(name: string, track: Track) {
@@ -279,12 +305,69 @@ namespace soundtrack {
         setKey(key: number) {
             this.key = key;
         }
+
         setMood(mood: MusicMood) {
             this.mood = mood;
+            this.generateChordsForMood();
+            this.generateTimeSigForMood();
         }
+
+        generateTimeSigForMood() {
+            switch (this.mood) {
+                case MusicMood.Chill: this.setTimeSignature(4, 4); break;
+                case MusicMood.Adventure: this.setTimeSignature(4, 4); break;
+            }
+        }
+
+        setTimeSignature(top: number, bottom: number) {
+            switch (bottom) {
+                case 4: this.beatVal = BeatFraction.Quarter; break;
+                case 8: this.beatVal = BeatFraction.Eighth; break;
+                case 16: this.beatVal = BeatFraction.Sixteenth; break
+                case 2: this.beatVal = BeatFraction.Half; break;
+            }
+
+            this.beatsPMeasure = top;
+        }
+
+        generateChordsForMood() {
+            let chordProg = "";
+            // VVN ToDO take in the key.
+            switch (this.mood) {
+                case MusicMood.Chill:
+                    chordProg = "Dm7 Gm7 Cm7 Cm7"
+                    break;
+                case MusicMood.Adventure:
+                    chordProg = "G F G G"
+                    break;
+            }
+
+            this.chords = [];
+            const chordNames = chordProg.split(" ")
+
+            for (let id = 0; id < chordNames.length; id ++ ) {
+                this.chords.push(musicUtils.makeChord(chordNames[id]));
+            }
+        }
+
         playOnUpdate() {
+            // Check if we have a new chord. if we do, update the tracks.
+            let chordHasChanged = false;
+            if (this.nextChordChangeTime < game.runtime()) {
+                const lastChord = this.chords[this.currentChordIdx];
+                this.currentChordIdx = ( this.currentChordIdx + 1 ) % this.chords.length;
+
+                this.nextChordChangeTime = game.runtime() + (this.beatsPMeasure * music.beat(this.beatVal));
+                chordHasChanged = true;
+            }
+
+
             for (let name of this.trackNames) {
-                this.tracks[name].play();
+                const track = this.tracks[name]
+                if (chordHasChanged) {
+                    track.generateNoteOptions(this.chords[this.currentChordIdx]);
+                }
+                track.play();
             }
         }
     }
@@ -304,13 +387,7 @@ namespace soundtrack {
         }
 
         getCurrentlyRecordingSoundtrack(): Soundtrack {
-            if (!this.recordingSoundtrackName) {
-                console.log("ERR: No recording soundtrack name")
-            }
             const st = this.soundtrackCollection[this.recordingSoundtrackName];
-            if (!st) {
-                console.log("ERR: No currently recording Soundtrack");
-            }
             return st;
         }
 
@@ -350,7 +427,7 @@ namespace soundtrack {
 
         const curr = state.getCurrentlyRecordingSoundtrack();
         if (curr) {
-            const track = new Track(instrument, role, playbackType);
+            const track = new Track(curr, instrument, role, playbackType);
             curr.addTrack(name, track);
             state.recordingTrackName = name;
         }
