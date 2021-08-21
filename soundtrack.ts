@@ -106,6 +106,24 @@ namespace soundtrack {
         }
     }
 
+    // PercussionSounds {
+    //     const freq = 440;
+    //     const duration = 10;
+    //     const volume = music.volume() * 10;
+    //     const waveForm = 5
+
+    //     const ampEnv = new Envelope(volume + 4, volume, volume, duration * 2);
+    //     const pitchEnv = new Envelope(freq + 2, freq - 2, freq, 0);
+
+    //     const trig = makeTrigger(duration, freq, waveForm, volume, 0, ampEnv, pitchEnv)
+    //     music.queuePlayInstructions2(0, trig);
+    // }
+        
+// FACE -> FAbBE -> EGBD -> EGBC //TEDDY"S lofi, 
+// DFAC (Dm7) -> DFGB (Gm7)-> (Cm7) 
+
+
+
     export class Track {
         motifs: MotifPlayback[];
         volume: number;
@@ -235,10 +253,12 @@ namespace soundtrack {
         tracks: {[key: string]:Track};
         trackNames: string[];
         key: number;
+        mood: MusicMood;
 
         constructor() {
             this.trackNames = [];
             this.tracks = {};
+            this.mood = MusicMood.Chill;
         }
 
         reset() {
@@ -259,7 +279,9 @@ namespace soundtrack {
         setKey(key: number) {
             this.key = key;
         }
-
+        setMood(mood: MusicMood) {
+            this.mood = mood;
+        }
         playOnUpdate() {
             for (let name of this.trackNames) {
                 this.tracks[name].play();
@@ -294,12 +316,6 @@ namespace soundtrack {
 
         getCurrentlyRecordingTrack() {
             const st = this.getCurrentlyRecordingSoundtrack()
-            if (!st) {
-                console.log("ERR: couldn't find the soundtrack")
-            }
-            if (!this.recordingTrackName) {
-                console.log("ERR: No recording track name!")
-            }
             if (st) {
                 return st.getTrack(this.recordingTrackName);
             }
@@ -373,7 +389,15 @@ namespace soundtrack {
 
     export function setTrackVolumeSecret(vol: number) {
         init();
-        state.getCurrentlyRecordingTrack().setVolume(vol);
+        const track = state.getCurrentlyRecordingTrack();
+        if (track) 
+            track.setVolume(vol);
+    }
+    export function setSoundtrackMoodSecret(mood: MusicMood) {
+        init();
+        const st = state.getCurrentlyRecordingSoundtrack();
+        if (st)
+            st.setMood(mood)
     }
 
 

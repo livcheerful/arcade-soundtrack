@@ -27,6 +27,13 @@ namespace soundtrack {
         VeryQuickly
     }
 
+    export enum MusicMood {
+        //% block="Adventure"
+        Adventure,
+        //% block="Chill"
+        Chill
+    }
+
     export enum TrackPlayType {
         //% block="Loop"
         Loop,
@@ -67,7 +74,7 @@ namespace soundtrack {
 
 
     /***********************************
-     *           COMPOSE
+     *           MOTIF
      ***********************************/
     /**
      * Create a new motif from image
@@ -92,7 +99,7 @@ namespace soundtrack {
 
 
     /***********************************
-     *           SONG
+     *           SOUNDTRACK
      ***********************************/
     /**
      * Define a soundtrack with a name. Doesn't play it
@@ -102,9 +109,8 @@ namespace soundtrack {
     export function setSoundtrack(name: string, handler: () => void) {
         registerSoundtrack(name)
 
-        handler();//VVN TODO should i be calling this? I think so....
+        handler();
     }
-
 
     //% blockId=soundtrack_set_key
     //% block="set key $key"
@@ -114,7 +120,13 @@ namespace soundtrack {
         setSoundtrackKeySecret(key)
     }
 
-
+    //% blockId=soundtrack_set_mood
+    //% block="set mood to $mood"
+    //% mood.shadow="soundtrack_mood_picker"
+    //% group="Song"
+    export function setSoundtrackMood(mood: number) {
+        setSoundtrackMoodSecret(mood)
+    }
 
     /***********************************
      *           TRACK
@@ -166,12 +178,22 @@ namespace soundtrack {
 
     //% blockId=soundtrack_track_play_type
     //% shim=TD_ID
-    //% block="$type"
+    //% block="$theType"
     //% blockHidden=true
-    //% type.defl="soundtrack.TrackPlayType.Loop"
+    //% theType.defl="soundtrack.TrackPlayType.Loop"
     //% duplicateShadowOnDrag
-    export function _trackPlayType(type: TrackPlayType): number {
-        return type;
+    export function _trackPlayType(theType: TrackPlayType): number {
+        return theType;
+    }
+
+    //% blockId=soundtrack_mood_picker
+    //% shim=TD_ID
+    //% block="$mood"
+    //% blockHidden=true
+    //% type.defl="soundtrack.MusicMood.Adventure"
+    //% duplicateShadowOnDrag
+    export function _setSoundtrackMood(mood: MusicMood): number {
+        return mood
     }
 
     //% blockId=soundtrack_instrument_picker
