@@ -11,15 +11,17 @@ namespace soundtrack {
         }
 
         getNotePitchOffset(x: number) {
-            for (let y = this.source.height - 1; y >= 0; y--) {
-                if (this.source.getPixel(x, y) != 0) {
-                    return this.source.height - y;
-                }
-            }
-            return -1;
+            const y = this.getBottomPixelY(x)
+            return y >= 0 ?  this.source.height - y :  y;
         }
 
-        getNoteLengthInPixels(x: number, y:number) {
+        getNoteLengthInPixels(x: number) {
+            const y = this.getBottomPixelY(x);
+
+            // If this isn't a new note attack
+            if (x > 0 && this.source.getPixel(x-1, y) == this.source.getPixel(x, y))
+                return 0;
+
             let count = 0;
             for (let xoff = x; count < this.source.width; count++) {
                 if (this.source.getPixel(xoff, y) == 0) {
@@ -29,13 +31,22 @@ namespace soundtrack {
             }
             return count;
         }
+
+        private getBottomPixelY(x: number) {
+            for (let y = this.source.height - 1; y >= 0; y--) {
+                if (this.source.getPixel(x, y) != 0) {
+                    return y;
+                }
+            }
+            return -1;
+        }
     }
 
     export class NoteBones {
-        pitch: number;
+        pitchOffset: number;
         length: number;
         constructor(pitch: number, length: number) {
-            this.pitch = pitch;
+            this.pitchOffset = pitch;
             this.length = length
         }
     }
@@ -49,6 +60,7 @@ namespace soundtrack {
         constructor(motif: Motif, speed:PlaySpeed) {
             this.motif = motif
             this.speed = speed
+            this.currentX = 0;
         }
 
         reset() {
@@ -57,14 +69,17 @@ namespace soundtrack {
 
         playNote(): NoteBones {
             const offset = this.motif.getNotePitchOffset(this.currentX);
-            const pixels = this.motif.getNoteLengthInPixels(this.currentX, this.motif.source.height - offset)
+            const pixels = this.motif.getNoteLengthInPixels(this.currentX)
 
             this.currentX += 1;
+            if (pixels == 0) {
+                return undefined
+            }
             return new NoteBones(offset, this.pixelsToMs(pixels) ); // TODO get note length
         }
 
         isDonePlaying() : boolean {
-            return this.currentX == this.motif.width - 1;
+            return this.currentX >= this.motif.width;
         }
 
         getPixelDuration() : number {
@@ -104,34 +119,69 @@ namespace soundtrack {
         isDone: boolean; // whether we've run out of music or not to play.
         // isMuted: boolean; TODO this would be cool.
 
-        constructor(instrument: InstrumentType, role: TrackRole, type: TrackPlayType) {
+        noteOptions: number[]; // Array of frequencies.
+
+        constructor(instrument: InstrumentType, role: TrackRole, pType: TrackPlayType) {
             this.instrument = instrument;
             this.role = role;
-            this.playbackType = type;
+            this.playbackType = pType;
+
+
             this.currentMotifIdx = 0;
             this.motifs = [];
             this.isDone = false;
             this.nextPlayTime = 0;
+
+            this.generateNoteOptions();
+        }
+
+        generateNoteOptions() {// TODO set this when we set the key...and mood?
+            this.noteOptions = [Note.C, Note.E, Note.G, Note.Bb];
+            if (this.role == TrackRole.Bass) {
+                this.noteOptions = [Note.C3, Note.E3, Note.G3, Note.Bb3];
+            }
+        }
+
+        getNoteFreqFromOffset(offset: number) {
+            if (this.role == TrackRole.Bass) {
+                return this.noteOptions[Math.floor(offset / this.noteOptions.length)]
+            }
+
+            return this.noteOptions[ offset % this.noteOptions.length]
         }
 
         playNoteWithInstrument(note: NoteBones) {
-            // VVN TODO, use the note properties...
+            const freq = this.getNoteFreqFromOffset(note.pitchOffset);
+            const vol = music.volume();
+
             let pitchEnv;
             let ampEnv;
             let waveForm;
+            let pitchMod = 2;
+            
             switch(this.instrument) {
                 case InstrumentType.Bell:
-                    pitchEnv = new envelopes.Envelope(100, 100, 0, 500)
-                    ampEnv = new envelopes.Envelope(100, 10, 355, 500)
+                    ampEnv = new envelopes.Envelope(vol + 10, vol, vol - 5, 50)
+                    pitchEnv = new envelopes.Envelope(freq, freq, freq, 0)
                     waveForm = 3;
                     break;
+                case InstrumentType.Chip:
+                    ampEnv = new envelopes.Envelope(vol , vol, vol, 50)
+                    pitchEnv = new envelopes.Envelope(freq, freq, freq, 0)
+                    waveForm = 15;
+                    break;
+                case InstrumentType.Brass:
+                    ampEnv = new envelopes.Envelope(vol + 5, vol -10, vol - 10, note.length)
+                    pitchMod = 0;
+                    waveForm = 2;
+                    break;
                 default:
-                    pitchEnv = new envelopes.Envelope(300, 300, 0, 500)
-                    ampEnv = new envelopes.Envelope(300, 20, 355, 500)
+                    ampEnv = new envelopes.Envelope(vol, vol, vol, 50)
+                    pitchEnv = new envelopes.Envelope(freq+10, freq-10, freq, 10)
                     waveForm = 1;
             }
 
-            const trig = envelopes.makeTrigger(200, 262, waveForm, 255, 20, ampEnv, pitchEnv)
+            const trig = envelopes.makeTrigger(note.length, freq, waveForm, vol, pitchMod, ampEnv, pitchEnv)
             music.queuePlayInstructions2(0, trig);
         }
 
@@ -141,16 +191,13 @@ namespace soundtrack {
                 const note = currentM.playNote();
                 this.nextPlayTime = game.runtime() + currentM.getPixelDuration();
 
-                if (note.length > 0) {
-                    console.log("note length: " + note.length)
+                if (note) {
                     this.playNoteWithInstrument(note);
-                } else {
-                    console.log("Note is nothing :(")
                 }
 
                 if (currentM.isDonePlaying()) {
                     // Queue up the next motif!
-                    this.currentMotifIdx = (this.currentMotifIdx + 1);
+                    this.currentMotifIdx++;
                     if (this.playbackType == TrackPlayType.Loop) {
                         this.currentMotifIdx = this.currentMotifIdx % this.motifs.length;
                     }
@@ -162,6 +209,13 @@ namespace soundtrack {
                     }
                 }
             }
+        }
+
+        reset() {
+            this.motifs.forEach(m => m.reset())
+            this.nextPlayTime = 0;
+            this.isDone = false;
+            this.currentMotifIdx = 0;
         }
 
         addMotif(motif: Motif, speed: PlaySpeed) {
@@ -185,6 +239,12 @@ namespace soundtrack {
         constructor() {
             this.trackNames = [];
             this.tracks = {};
+        }
+
+        reset() {
+            for (let name of this.trackNames) {
+                this.tracks[name].reset();
+            }
         }
 
         addTrack(name: string, track: Track) {
@@ -257,6 +317,7 @@ namespace soundtrack {
 
         stopPlaySoundtrack() {
             this.isPlaying = false;
+            this.getCurrentlyPlayingSoundtrack().reset();
         }
 
     }
@@ -323,7 +384,6 @@ namespace soundtrack {
         game.currentScene().eventContext.registerFrameHandler(scene.PHYSICS_PRIORITY + 1, function() {
 
             if (state.isPlaying) {
-                console.log("let's play!")
                 state.getCurrentlyPlayingSoundtrack().playOnUpdate();
             }
         })
