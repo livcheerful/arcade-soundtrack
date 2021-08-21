@@ -162,7 +162,7 @@ namespace soundtrack {
                 switch(this.role) {
                     case TrackRole.Bass: this.noteOptions = chord.getNotes(1, 2);
                     case TrackRole.Melody: this.noteOptions = chord.getNotes(4, 2);
-                    case TrackRole.Flavor: this.noteOptions = musicUtils.getScale(this.parent.key, this.parent.scaleType, musicUtils.getOctave( this.parent.key ) - 2, 4);
+                    case TrackRole.Flavor: this.noteOptions = musicUtils.getScale(this.parent.mood.key, this.parent.mood.scaleType, musicUtils.getOctave( this.parent.mood.key ) - 2, 4);
                     case TrackRole.Rhythm: this.noteOptions = chord.getNotes(4, 1); // VVN TODO RHYTHM
                 }
             }
@@ -257,30 +257,94 @@ namespace soundtrack {
         }
     }
 
+
+    export class Mood {
+        key: number;
+        beatVal: BeatFraction;
+        beatsPM: number;
+
+        scaleType: musicUtils.ScaleType;
+
+        chords: musicUtils.Chord[]; // In the correctkey.
+
+        bassNotes: number[]; // array of....Sixteenth notes?? some kind of division. If there is a note there, play loud. Otherwise play random note in the current chord.
+
+        // Pass in the chord progression in the key of C!
+        constructor(key: number, timeTop: number, timeBottom: number, scaleType: musicUtils.ScaleType, cChordProg: string) {
+            this.key = key;
+            this.scaleType = scaleType;
+
+            this.setTimeSignature(timeTop, timeBottom);
+            this.generateChordsForMood(cChordProg);
+        }
+
+        getScale() {
+
+        }
+
+        getBassNotes() {
+
+        }
+
+        getMelodyNotes() {
+
+        }
+
+        getDrumNotes() {
+
+        }
+
+        updateKey(newKey: Note) {
+            this.transposeChords(this.key, newKey)
+        }
+
+        transposeChords(oldKey: Note, newKey: Note) {
+            const interval = musicUtils.intervalBetweenNotes(oldKey, newKey);
+
+            for (let c = 0; c <  this.chords.length; c++) {
+                this.chords[c].transpose(interval)
+            }
+
+            this.key = newKey;
+        }
+
+        generateChordsForMood(chordProg: string) {
+
+            const chordNames = chordProg.split(" ")
+
+            this.chords = [];
+            for (let id = 0; id < chordNames.length; id++) {
+                this.chords.push( musicUtils.makeChord(chordNames[id]) )
+            }
+
+            // Assuming the passed in progressions are in the key of C...
+            this.transposeChords(Note.C, this.key)
+        }
+
+        setTimeSignature(top: number, bottom: number) {
+            switch (bottom) {
+                case 4: this.beatVal = BeatFraction.Quarter; break;
+                case 8: this.beatVal = BeatFraction.Eighth; break;
+                case 16: this.beatVal = BeatFraction.Sixteenth; break
+                case 2: this.beatVal = BeatFraction.Half; break;
+            }
+
+            this.beatsPM = top;
+        }
+    }
+
     export class Soundtrack {
         tracks: {[key: string]:Track};
         trackNames: string[];
 
-        key: number;
-        mood: MusicMood;
-        beatVal: BeatFraction;
-        beatsPMeasure: number;
-        scaleType: musicUtils.ScaleType;
+        mood: Mood;
 
-        chords: musicUtils.Chord[];
         nextChordChangeTime: number;
         currentChordIdx: number;
 
         constructor() {
             this.trackNames = [];
             this.tracks = {};
-            this.key = Note.C;
-            this.mood = MusicMood.Chill;
-            this.generateChordsForMood();
-            this.generateTimeSigForMood();
-
-            this.beatVal = BeatFraction.Quarter;
-            this.beatsPMeasure = 4;
 
             this.currentChordIdx = -1;
             this.nextChordChangeTime = 0;
@@ -314,74 +378,25 @@ namespace soundtrack {
         }
 
         changeKey(diff: number) {
-            this.key = musicUtils.getNoteFromInterval(this.key, diff);
-            this.generateChordsForMood();
+            this.mood.updateKey(musicUtils.getNoteFromInterval(this.mood.key, diff))
         }
 
         setKey(key: number) {
-            this.key = key;
-            this.generateChordsForMood();
+            this.mood.updateKey(key);
         }
 
-        setMood(mood: MusicMood) {
+        setMood(mood: Mood) {
             this.mood = mood;
-            this.generateChordsForMood();
-            this.generateTimeSigForMood();
-        }
-
-        generateTimeSigForMood() {
-            switch (this.mood) {
-                case MusicMood.Chill: this.setTimeSignature(4, 4); break;
-                case MusicMood.Adventure: this.setTimeSignature(4, 4); break;
-            }
-        }
-
-        setTimeSignature(top: number, bottom: number) {
-            switch (bottom) {
-                case 4: this.beatVal = BeatFraction.Quarter; break;
-                case 8: this.beatVal = BeatFraction.Eighth; break;
-                case 16: this.beatVal = BeatFraction.Sixteenth; break
-                case 2: this.beatVal = BeatFraction.Half; break;
-            }
-
-            this.beatsPMeasure = top;
-        }
-
-        generateChordsForMood() {
-            let chordProg = "";
-
-            // These are all written in the key of C.
-            switch (this.mood) {
-                case MusicMood.Chill:
-                    this.scaleType = musicUtils.ScaleType.Minor;
-                    chordProg = "Dm7 Gm7 Cm7 C"
-                    break;
-                case MusicMood.Adventure:
-                    this.scaleType = musicUtils.ScaleType.Major;
-                    chordProg = "C Bb C C"
-                    break;
-            }
-
-            this.chords = [];
-            const chordNames = chordProg.split(" ")
-
-            const transpose = musicUtils.intervalBetweenNotes(Note.C, this.key);
-
-            for (let id = 0; id < chordNames.length; id ++ ) {
-                const c = musicUtils.makeChord(chordNames[id])
-                c.transpose(transpose)
-                this.chords.push(c);
-            }
         }
 
         playOnUpdate() {
             // Check if we have a new chord. if we do, update the tracks.
             let chordHasChanged = false;
             if (this.nextChordChangeTime < game.runtime()) {
-                const lastChord = this.chords[this.currentChordIdx];
-                this.currentChordIdx = ( this.currentChordIdx + 1 ) % this.chords.length;
+                const lastChord = this.mood.chords[this.currentChordIdx];
+                this.currentChordIdx = ( this.currentChordIdx + 1 ) % this.mood.chords.length;
 
-                this.nextChordChangeTime = game.runtime() + (this.beatsPMeasure * music.beat(this.beatVal));
+                this.nextChordChangeTime = game.runtime() + (this.mood.beatsPM * music.beat(this.mood.beatVal));
                 chordHasChanged = true;
             }
 
@@ -389,7 +404,7 @@ namespace soundtrack {
             for (let name of this.trackNames) {
                 const track = this.tracks[name]
                 if (chordHasChanged) {
-                    track.generateNoteOptions(this.chords[this.currentChordIdx]);
+                    track.generateNoteOptions(this.mood.chords[this.currentChordIdx]);
                 }
                 track.play();
             }
@@ -404,10 +419,15 @@ namespace soundtrack {
         isPlaying: boolean;
 
         soundtrackCollection: { [key:string]: Soundtrack};
+        moods: Mood[];
 
         constructor() {
             this.soundtrackCollection = {};
             this.isPlaying = false;
+
+            this.moods = []
+            this.moods[MusicMood.Adventure] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.Major, "C Bb C C");
+            this.moods[MusicMood.Chill] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.HarmonicMinor, "Dm7 Gm7 Cm7 C");
         }
 
         getCurrentlyRecordingSoundtrack(): Soundtrack {
@@ -511,7 +531,7 @@ namespace soundtrack {
         init();
         const st = state.getCurrentlyRecordingSoundtrack();
         if (st)
-            st.setMood(mood)
+            st.setMood(state.moods[mood])
     }
 
 
