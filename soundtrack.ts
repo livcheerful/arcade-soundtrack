@@ -162,7 +162,7 @@ namespace soundtrack {
                 switch(this.role) {
                     case TrackRole.Bass: this.noteOptions = chord.getNotes(1, 2);
                     case TrackRole.Melody: this.noteOptions = chord.getNotes(4, 2);
-                    case TrackRole.Flavor: this.noteOptions = chord.getNotes(2, 5);
+                    case TrackRole.Flavor: this.noteOptions = musicUtils.getScale(this.parent.key, this.parent.scaleType, musicUtils.getOctave( this.parent.key ) - 2, 4);
                     case TrackRole.Rhythm: this.noteOptions = chord.getNotes(4, 1); // VVN TODO RHYTHM
                 }
             }
@@ -178,7 +178,7 @@ namespace soundtrack {
 
         playNoteWithInstrument(note: NoteBones) {
             const freq = this.getNoteFreqFromOffset(note.pitchOffset);
-            const vol = music.volume();
+            const vol = music.volume() * (this.volume / this.parent.getTrackSumVol());
 
             let pitchEnv;
             let ampEnv;
@@ -265,6 +265,7 @@ namespace soundtrack {
         mood: MusicMood;
         beatVal: BeatFraction;
         beatsPMeasure: number;
+        scaleType: musicUtils.ScaleType;
 
         chords: musicUtils.Chord[];
         nextChordChangeTime: number;
@@ -273,6 +274,7 @@ namespace soundtrack {
         constructor() {
             this.trackNames = [];
             this.tracks = {};
+            this.key = Note.C;
             this.mood = MusicMood.Chill;
             this.generateChordsForMood();
             this.generateTimeSigForMood();
@@ -302,8 +304,23 @@ namespace soundtrack {
             return this.tracks[name];
         }
 
+        getTrackSumVol() : number {
+            let sum = 1;
+            for (let name of this.trackNames) {
+                const track = this.tracks[name]
+                sum += track.volume;
+            }
+            return sum;
+        }
+
+        changeKey(diff: number) {
+            this.key = musicUtils.getNoteFromInterval(this.key, diff);
+            this.generateChordsForMood();
+        }
+
         setKey(key: number) {
             this.key = key;
+            this.generateChordsForMood();
         }
 
         setMood(mood: MusicMood) {
@@ -332,21 +349,28 @@ namespace soundtrack {
 
         generateChordsForMood() {
             let chordProg = "";
-            // VVN ToDO take in the key.
+
+            // These are all written in the key of C.
             switch (this.mood) {
                 case MusicMood.Chill:
-                    chordProg = "Dm7 Gm7 Cm7 Cm7"
+                    this.scaleType = musicUtils.ScaleType.Minor;
+                    chordProg = "Dm7 Gm7 Cm7 C"
                     break;
                 case MusicMood.Adventure:
-                    chordProg = "G F G G"
+                    this.scaleType = musicUtils.ScaleType.Major;
+                    chordProg = "C Bb C C"
                     break;
             }
 
             this.chords = [];
             const chordNames = chordProg.split(" ")
 
+            const transpose = musicUtils.intervalBetweenNotes(Note.C, this.key);
+
             for (let id = 0; id < chordNames.length; id ++ ) {
-                this.chords.push(musicUtils.makeChord(chordNames[id]));
+                const c = musicUtils.makeChord(chordNames[id])
+                c.transpose(transpose)
+                this.chords.push(c);
             }
         }
 
@@ -456,12 +480,25 @@ namespace soundtrack {
         state.stopPlaySoundtrack();
     }
 
+    export function changeKeyBySecret(diff: number) {
+        init();
+
+        const st = state.isPlaying ? state.getCurrentlyPlayingSoundtrack()
+            : state.getCurrentlyRecordingSoundtrack();
+
+        if (st) {
+            st.changeKey(diff);
+        }
+    }
+
     export function setSoundtrackKeySecret(key: number) {
         init();
 
         const st = state.isPlaying ? state.getCurrentlyPlayingSoundtrack()
                     : state.getCurrentlyRecordingSoundtrack();
-        st.setKey(key)
+
+        if (st)
+            st.setKey(key)
     }
 
     export function setTrackVolumeSecret(vol: number) {

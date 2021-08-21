@@ -72,6 +72,12 @@ namespace soundtrack {
         stopSoundtrackSecret();
     }
 
+    //% block="change key by $interval"
+    //% group="Play"
+    export function changeKeyBy(interval: number) {
+        changeKeyBySecret(interval);
+    }
+
 
     /***********************************
      *           MOTIF
@@ -146,7 +152,7 @@ namespace soundtrack {
 
 
     //% blockId=soundtrack_set_volume
-    //% block="set track volume percent to $vol"
+    //% block="set track volume $vol"
     //% group="Track"
     export function setTrackVolume(vol: number) {
         setTrackVolumeSecret(vol);
