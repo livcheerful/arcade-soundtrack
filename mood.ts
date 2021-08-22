@@ -32,7 +32,6 @@ namespace soundtrack {
 
             this.currentChordIdx = this.chords.length;
             this.nextChordChangeTime = 0;
-            this.drumPattern = img`
 
         }
 
