@@ -16,6 +16,8 @@ namespace soundtrack {
         bassNotes: Image; // array of notes. If there is a note there, play loud. Otherwise play random note in the current chord.
         bassNoteGenStyle: () => Note[];
 
+        drumPattern: Image;
+
         // chordProgKey is the key the chord progression was written in. If you dont wanna pass it pass in your chords in the key of C 
         constructor(key: number, timeTop: number, timeBottom: number, scaleType: musicUtils.ScaleType, chordProg: string, bassNotes: Image, chordProgKey = Note.C,) {
             this.key = key;
@@ -30,6 +32,7 @@ namespace soundtrack {
 
             this.currentChordIdx = this.chords.length;
             this.nextChordChangeTime = 0;
+            this.drumPattern = img`
 
         }
 
@@ -55,8 +58,6 @@ namespace soundtrack {
         }
 
         getCurrentChord() {
-            console.log("curren chord idx: " + this.currentChordIdx);
-            console.log("our chords: ")
             console.log(this.chords)
             return this.chords[this.currentChordIdx]
         }
@@ -64,15 +65,8 @@ namespace soundtrack {
         getBassNotes(note: PixelNote): NoteWave[] {
             if (this.bassNotes) {
                 const x = note.x % this.bassNotes.width;
-                let yPixelPos = [];
-                for (let y = 0; y < this.bassNotes.height; y++) {
-                    if (this.bassNotes.getPixel(x, y)) {
-                        if (x == 0 || this.bassNotes.getPixel(x - 1, y) != this.bassNotes.getPixel(x, y)) {
-                            // This is a fresh attack. add it
-                            yPixelPos.push(this.bassNotes.height - y - 1);
-                        }
-                    }
-                }
+
+                const yPixelPos = this.getPixelsInCol(x, this.bassNotes);
                 const scale = musicUtils.getScale(this.getCurrentChord().root, this.getCurrentChord().isMajor() ? musicUtils.ScaleType.Major : musicUtils.ScaleType.HarmonicMinor, 2, this.computeNumberOctavesFromOffset(this.bassNotes.height));
                 const notes = []
                 for (let i = 0; i < yPixelPos.length; i++) {
@@ -97,7 +91,22 @@ namespace soundtrack {
         }
 
         getDrumNotes(note: PixelNote): NoteWave[] {
-            return []
+            const ys = this.getPixelsInCol(note.x, this.drumPattern);
+            const notes = ys.map(y => (new NoteWave(y)))
+            return notes;
+        }
+
+        getPixelsInCol(x: number, img: Image) {
+            let yPixelPos = [];
+            for (let y = 0; y < img.height; y++) {
+                if (img.getPixel(x, y)) {
+                    if (x == 0 || img.getPixel(x - 1, y) != img.getPixel(x, y)) {
+                        // This is a fresh attack. add it
+                        yPixelPos.push(img.height - y - 1);
+                    }
+                }
+            }
+            return yPixelPos;
         }
 
         getFlavorNotes(note: PixelNote): NoteWave[] {

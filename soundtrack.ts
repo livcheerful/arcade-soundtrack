@@ -12,6 +12,29 @@ namespace soundtrack {
 
     }
 
+    function getTriggerForDrum(sound: DrumSounds, volume: number) {
+        switch (sound) {
+            case DrumSounds.CrashSymbol:
+                const ampEnv = new envelopes.Envelope(volume + 4, volume, volume, 300);
+                const pitchEnv = new envelopes.Envelope(550 + 2, 550 - 2, 550, 0);
+                return envelopes.makeTrigger(100, 550, 5, volume, 0, ampEnv, pitchEnv)
+            default:
+                // HiHat sound
+                const hhAmp = new envelopes.Envelope(volume + 4, volume, volume, 20);
+                const hhPitch = new envelopes.Envelope(440 + 2, 440 - 2, 440, 0);
+
+                return envelopes.makeTrigger(20, 440, 5, volume, 0, hhAmp, hhPitch)
+                
+        }
+    }
+
+    export enum DrumSounds {
+        Kick,
+        Snare,
+        HiHat,
+        CrashSymbol
+    }
+
     export enum PlayStyle {
         OneToOne,
         Arpeggiated,
@@ -127,19 +150,6 @@ namespace soundtrack {
             }
         }
     }
-
-    // PercussionSounds {
-    //     const freq = 440;
-    //     const duration = 10;
-    //     const volume = music.volume() * 10;
-    //     const waveForm = 5
-
-    //     const ampEnv = new Envelope(volume + 4, volume, volume, duration * 2);
-    //     const pitchEnv = new Envelope(freq + 2, freq - 2, freq, 0);
-
-    //     const trig = makeTrigger(duration, freq, waveForm, volume, 0, ampEnv, pitchEnv)
-    //     music.queuePlayInstructions2(0, trig);
-    // }
         
 // FACE -> FAbBE -> EGBD -> EGBC //TEDDY"S lofi, 
 // DFAC (Dm7) -> DFGB (Gm7)-> (Cm7) 
@@ -166,7 +176,6 @@ namespace soundtrack {
             this.role = role;
             this.playbackType = pType;
 
-
             this.currentMotifIdx = 0;
             this.volume = 1;
             this.motifs = [];
@@ -178,7 +187,7 @@ namespace soundtrack {
         playNoteWithInstrument(note: PixelNote) {
             const notes = this.parent.mood.getNote(this.role, note)
             const vol = music.volume() * (this.volume / this.parent.getTrackSumVol());
-
+            
 
             for (let i = 0; i < notes.length; i++) {
                 const freq = notes[i].freq
@@ -187,32 +196,38 @@ namespace soundtrack {
                 let waveForm;
                 let pitchMod = 2;
                 let noteLength = music.beat(note.pixelVal) / 2;
-                switch(this.instrument) {
-                    case InstrumentType.Bell:
-                        ampEnv = new envelopes.Envelope(vol + 10, vol, vol - 5, 50)
-                        pitchEnv = new envelopes.Envelope(freq, freq, freq, 0)
-                        waveForm = 3;
-                        noteLength = 100;
-                        break;
-                    case InstrumentType.Chip:
-                        ampEnv = new envelopes.Envelope(vol , vol, vol, 50)
-                        pitchEnv = new envelopes.Envelope(freq, freq, freq, 0)
-                        waveForm = 15;
-                        break;
-                    case InstrumentType.Brass:
-                        ampEnv = new envelopes.Envelope(vol + 5, vol -10, vol - 10, 10)
-                        pitchMod = 0;
-                        waveForm = 2;
-                        noteLength = music.beat(note.pixelVal) * .75;
-                        break;
-                    default:
-                        ampEnv = new envelopes.Envelope(vol, vol, vol, 10)
-                        pitchEnv = new envelopes.Envelope(freq+10, freq-10, freq, 10)
-                        waveForm = 1;
-                }
+                if (this.instrument == InstrumentType.Percussion) {
+                    const trig = getTriggerForDrum(notes[i].freq, vol);
+                    music.queuePlayInstructions2(0, trig);
+                } else {
+                    switch(this.instrument) {
+                        case InstrumentType.Bell:
+                            ampEnv = new envelopes.Envelope(vol + 10, vol, vol - 5, 50)
+                            pitchEnv = new envelopes.Envelope(freq, freq, freq, 0)
+                            waveForm = 3;
+                            noteLength = 100;
+                            break;
+                        case InstrumentType.Chip:
+                            ampEnv = new envelopes.Envelope(vol , vol, vol, 50)
+                            pitchEnv = new envelopes.Envelope(freq, freq, freq, 0)
+                            waveForm = 15;
+                            break;
+                        case InstrumentType.Brass:
+                            ampEnv = new envelopes.Envelope(vol + 5, vol -10, vol - 10, 10)
+                            pitchMod = 0;
+                            waveForm = 2;
+                            noteLength = music.beat(note.pixelVal) * .75;
+                            break;
 
-                const trig = envelopes.makeTrigger(noteLength, freq, waveForm, vol, pitchMod, ampEnv, pitchEnv)
-                music.queuePlayInstructions2(notes[i].offset, trig);
+                        default:
+                            ampEnv = new envelopes.Envelope(vol, vol, vol, 10)
+                            pitchEnv = new envelopes.Envelope(freq+10, freq-10, freq, 10)
+                            waveForm = 1;
+                    }
+
+                    const trig = envelopes.makeTrigger(noteLength, freq, waveForm, vol, pitchMod, ampEnv, pitchEnv)
+                    music.queuePlayInstructions2(notes[i].offset, trig);
+                }
             }
         }
 
