@@ -91,17 +91,17 @@ namespace soundtrack {
     //% img.shadow="screen_image_picker"
     //% block
     //% group="Compose"
-    export function motif(img: Image): Motif {
+    export function motif( img: Image): Motif {
         return soundtrack.createMotif(img);
     }
 
 
-    //% block="play $motif $speed"
+    //% block="play $motif on $track $speed"
     //% motif.shadow="motifCreate"
     //% speed.shadow="soundtrack_speed_picker"
     //% group="Compose"
-    export function playMotif(motif: Motif, speed: PlaySpeed) {
-        registerMotif(motif, speed);
+    export function playMotif(track: string, motif: Motif, speed: PlaySpeed) {
+        registerMotif(track, motif, speed);
     }
 
 

@@ -143,6 +143,7 @@ namespace soundtrack {
         }
 
         getPixelDuration() : number {
+            console.log("pixel duration is: " + music.beat(this.playSpeedToPixelLength()))
             return music.beat(this.playSpeedToPixelLength())
         }
 
@@ -155,6 +156,7 @@ namespace soundtrack {
                 case PlaySpeed.VerySlowly:
                     return BeatFraction.Whole
                 case PlaySpeed.Slowly:
+                    console.log("its a half Note")
                     return BeatFraction.Half
                 case PlaySpeed.Normal:
                     return BeatFraction.Quarter
@@ -171,31 +173,43 @@ namespace soundtrack {
 
 
     export class Track {
+        handler: () => void;
+
         parent: Soundtrack
-        motifs: MotifPlayback[];
+        currentMotif: MotifPlayback;
         volume: number;
 
         instrument: InstrumentType;
         role: TrackRole;
         playbackType: TrackPlayType;
 
-        currentMotifIdx: number;
-        nextPlayTime: number;
+        isPlaying: boolean;
         isDone: boolean; // whether we've run out of music or not to play.
         // isMuted: boolean; TODO this would be cool.
 
-        constructor(parent: Soundtrack, instrument: InstrumentType, role: TrackRole, pType: TrackPlayType) {
+        constructor(parent: Soundtrack, instrument: InstrumentType, role: TrackRole, pType: TrackPlayType, handler: () =>void) {
             this.parent = parent
             
             this.instrument = instrument;
             this.role = role;
             this.playbackType = pType;
 
-            this.currentMotifIdx = 0;
             this.volume = 1;
-            this.motifs = [];
             this.isDone = false;
-            this.nextPlayTime = 0;
+            this.isPlaying = true;
+
+            this.handler = handler;
+
+            control.runInParallel(() => {
+                this.startPlayingAHH()
+            })
+        }
+
+        startPlayingAHH() {
+            do {
+                this.handler();
+            } while(this.playbackType == TrackPlayType.Loop && this.isPlaying)
+            this.isDone = true;
         }
 
 
@@ -213,7 +227,6 @@ namespace soundtrack {
                 let noteLength = music.beat(note.pixelVal) / 2;
                 if (this.role == TrackRole.Rhythm) {
                     if (this.instrument == InstrumentType.Percussion) {
-                        console.log("This is the drum sound: " + freq)
                         const trig = getTriggerForDrum(freq, vol);
                         music.queuePlayInstructions2(0, trig);
                         continue;
@@ -252,41 +265,19 @@ namespace soundtrack {
             }
         }
 
-        play() {
-            if (!this.isDone && this.nextPlayTime <= game.runtime()) {
-                const currentM = this.motifs[this.currentMotifIdx]
-                const note = currentM.playNote();
-                this.nextPlayTime = game.runtime() + currentM.getPixelDuration();
-
-                if (note) {
-                    this.playNoteWithInstrument(note);
-                }
-
-                if (currentM.isDonePlaying()) {
-                    // Queue up the next motif!
-                    this.currentMotifIdx++;
-                    if (this.playbackType == TrackPlayType.Loop) {
-                        this.currentMotifIdx = this.currentMotifIdx % this.motifs.length;
-                    }
-
-                    if (this.currentMotifIdx >= this.motifs.length) {
-                        this.isDone = true;
-                    } else {
-                        this.motifs[this.currentMotifIdx].reset(); // Set it up again, boys!
-                    }
-                }
-            }
-        }
-
         reset() {
-            this.motifs.forEach(m => m.reset())
-            this.nextPlayTime = 0;
             this.isDone = false;
-            this.currentMotifIdx = 0;
         }
 
-        addMotif(motif: Motif, speed: PlaySpeed) {
-            this.motifs.push(new MotifPlayback(motif, speed));
+        playMotif(motif: Motif, speed: PlaySpeed) {
+            this.currentMotif = new MotifPlayback(motif, speed);
+            for (let x = 0; x < this.currentMotif.motif.width; x++) {
+                const note= this.currentMotif.playNote();
+                if (note)
+                    this.playNoteWithInstrument(note);
+                console.log("We're gonna pause this long:" + this.currentMotif.getPixelDuration());
+                loops.pause(this.currentMotif.getPixelDuration())
+            }
         }
 
         setVolume(vol: number) {
@@ -355,11 +346,6 @@ namespace soundtrack {
 
         playOnUpdate() {
             this.mood.update();
-
-            for (let name of this.trackNames) {
-                const track = this.tracks[name]
-                track.play();
-            }
         }
     }
 
@@ -467,16 +453,15 @@ namespace soundtrack {
 
         const curr = state.getCurrentSoundtrack();
         if (curr) {
-            const track = new Track(curr, instrument, role, playbackType);
+            const track = new Track(curr, instrument, role, playbackType, handler);
             curr.addTrack(name, track);
             state.recordingTrackName = name;
-            handler();
         }
     }
 
-    export function registerMotif(motif: Motif, speed: PlaySpeed) {
-        const track = state.getCurrentlyRecordingTrack();
-        track.addMotif(motif, speed);
+    export function registerMotif(trackName:string,motif: Motif, speed: PlaySpeed) {
+        const track = state.getCurrentSoundtrack().tracks[trackName];
+        track.playMotif(motif, speed);
     }
 
     export function createMotif (img: Image) {
