@@ -395,6 +395,12 @@ namespace soundtrack {
             this.moods[MusicMood.Adventure].setFlavorPlayStyle(PlayStyle.Octaves);
             this.moods[MusicMood.Chill] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.Major, "Dm7 Gm7 Cm7 C", bassForChill);
             this.moods[MusicMood.Chill].setFlavorPlayStyle(PlayStyle.Arpeggiated);
+            this.moods[MusicMood.Chill].setDrumPattern(img`
+3 3 3 3 3 3 . . 3 3 3 3 3 3 . . 
+. . . . . . . . . . . . . . . . 
+. . . . 3 . . . . . . . 3 . . . 
+3 . . 3 . . . . 3 . . 3 . . . . 
+`)
             this.moods[MusicMood.Magical] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.Minor, "Bb F Gm F", bassForChill, Note.Bb );
             this.moods[MusicMood.Magical].setFlavorPlayStyle(PlayStyle.Arpeggiated);
         }

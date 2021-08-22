@@ -32,7 +32,12 @@ namespace soundtrack {
 
             this.currentChordIdx = this.chords.length;
             this.nextChordChangeTime = 0;
-
+            this.drumPattern = img`
+                . . . .
+                2 3 2 3
+                . . 7 .
+                3 . . .
+            `
         }
 
         getNote(role: TrackRole, note: PixelNote): NoteWave[] {
@@ -177,6 +182,10 @@ namespace soundtrack {
 
         setFlavorPlayStyle(style: PlayStyle) {
             this.flavorPlayStyle = style;
+        }
+
+        setDrumPattern(pattern: Image) {
+            this.drumPattern = pattern;
         }
     }
 }
