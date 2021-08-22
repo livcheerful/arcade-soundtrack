@@ -263,7 +263,7 @@ namespace soundtrack {
         currentChordIdx: number;
         nextChordChangeTime: number;
 
-        bassNotes: Image; // array of....Sixteenth notes?? some kind of division. If there is a note there, play loud. Otherwise play random note in the current chord.
+        bassNotes: Image; // array of notes. If there is a note there, play loud. Otherwise play random note in the current chord.
         bassNotePixelEquals: BeatFraction;
 
         // Pass in the chord progression in the key of C!
@@ -291,9 +291,10 @@ namespace soundtrack {
             } 
         }
 
-        getScale() {
-            // TODO pass in # octaves as opt param
-            return musicUtils.getScale(this.key, this.scaleType, 2, 4);
+        getScale(bassOct: number, numOct: number) {
+            const scale = musicUtils.getScale(this.key, this.scaleType, bassOct, numOct);
+            console.log(scale)
+            return scale
         }
 
         update() {
@@ -320,9 +321,9 @@ namespace soundtrack {
         }
 
         getFlavorNotes(note: PixelNote): NoteWave[] {
-            const scale = this.getScale();
             const off = note.pitchOffset
-            return [new NoteWave(scale[off % scale.length])]
+            const scale = this.getScale(2, Math.floor(off  / 8) + 1);
+            return [new NoteWave(scale[off])]
         }
 
         updateKey(newKey: Note) {

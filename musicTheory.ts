@@ -77,18 +77,20 @@ namespace musicUtils {
     export function getScale(key: number, scale: ScaleType, baseOct: number, numOct: number) {
         let scaleIntervals;
         switch (scale) {
-            case ScaleType.Major: scaleIntervals = [Interval.Perfect, Interval.Whole, Interval.Whole, Interval.Half, Interval.Whole, Interval.Whole, Interval.Whole, Interval.Half]; break;
-            case ScaleType.Minor: scaleIntervals = [Interval.Perfect, Interval.Whole, Interval.Half, Interval.Whole, Interval.Whole, Interval.Half, Interval.Whole, Interval.Whole]; break;
-            case ScaleType.HarmonicMinor: scaleIntervals = [Interval.Perfect, Interval.Whole, Interval.Half, Interval.Whole, Interval.Whole, Interval.Half, Interval.AugmentedSecond, Interval.Half]; break;
-            case ScaleType.Blues: scaleIntervals = [Interval.Perfect, Interval.AugmentedSecond, Interval.Whole, Interval.Whole, Interval.Half, Interval.AugmentedSecond, Interval.Whole]; break;
-            case ScaleType.MinorPentatonic: scaleIntervals = [Interval.Perfect, Interval.AugmentedSecond, Interval.Whole, Interval.Whole, Interval.AugmentedSecond, Interval.Whole]; break;
+            case ScaleType.Major: scaleIntervals = [Interval.Perfect, Interval.Whole, Interval.Whole, Interval.Half, Interval.Whole, Interval.Whole, Interval.Whole]; break;
+            case ScaleType.Minor: scaleIntervals = [Interval.Perfect, Interval.Whole, Interval.Half, Interval.Whole, Interval.Whole, Interval.Half, Interval.Whole]; break;
+            case ScaleType.HarmonicMinor: scaleIntervals = [Interval.Perfect, Interval.Whole, Interval.Half, Interval.Whole, Interval.Whole, Interval.Half, Interval.AugmentedSecond]; break;
+            case ScaleType.Blues: scaleIntervals = [Interval.Perfect, Interval.AugmentedSecond, Interval.Whole, Interval.Whole, Interval.Half, Interval.AugmentedSecond]; break;
+            case ScaleType.MinorPentatonic: scaleIntervals = [Interval.Perfect, Interval.AugmentedSecond, Interval.Whole, Interval.Whole, Interval.AugmentedSecond]; break;
         }
 
         const baseNote = getNoteInCorrectOctave(key, baseOct);
         const ret = [];
         for (let o = 0; o < numOct; o++) {
+            let sum = 0;
             for (let n = 0; n < scaleIntervals.length; n++) {
-                ret.push(getNoteFromInterval(baseNote, scaleIntervals[n] + o * Interval.Octave))
+                sum += scaleIntervals[n];
+                ret.push(getNoteFromInterval(baseNote, sum + o * Interval.Octave))
             }
         }
         return ret;
