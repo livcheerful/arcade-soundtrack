@@ -301,6 +301,8 @@ namespace soundtrack {
 
 
     export class Soundtrack {
+        handler: () => void;
+
         tracks: {[key: string]:Track};
         trackNames: string[];
 
@@ -308,9 +310,11 @@ namespace soundtrack {
 
         currentChordIdx: number;
 
-        constructor() {
+        constructor(handler: () => void) {
             this.trackNames = [];
             this.tracks = {};
+
+            this.handler = handler;
         }
 
         reset() {
@@ -361,9 +365,8 @@ namespace soundtrack {
 
     export class SoundtrackState {
         recordingTrackName: string;
-        recordingSoundtrackName: string;
 
-        playingSoundtrackName: string;
+        currentSoundtrackName: string;
         isPlaying: boolean;
 
         soundtrackCollection: { [key:string]: Soundtrack};
@@ -426,52 +429,48 @@ namespace soundtrack {
             this.moods[MusicMood.Magical].setFlavorPlayStyle(PlayStyle.Arpeggiated);
         }
 
-        getCurrentlyRecordingSoundtrack(): Soundtrack {
-            const st = this.soundtrackCollection[this.recordingSoundtrackName];
+        getCurrentSoundtrack(): Soundtrack {
+            const st = this.soundtrackCollection[this.currentSoundtrackName];
             return st;
         }
 
         getCurrentlyRecordingTrack() {
-            const st = this.getCurrentlyRecordingSoundtrack()
+            const st = this.getCurrentSoundtrack()
             if (st) {
                 return st.getTrack(this.recordingTrackName);
             }
             return undefined;
         }
 
-        getCurrentlyPlayingSoundtrack(): Soundtrack {
-            return this.soundtrackCollection[this.playingSoundtrackName]
-        }
-
         startPlaySoundtrack(name: string) {
-            this.playingSoundtrackName = name;
+            this.currentSoundtrackName = name
             this.isPlaying = true;
+            this.getCurrentSoundtrack().handler();
         }
 
         stopPlaySoundtrack() {
             this.isPlaying = false;
-            this.getCurrentlyPlayingSoundtrack().reset();
+            this.getCurrentSoundtrack().reset();
         }
 
     }
 
-    export function registerSoundtrack(name: string) {
+    export function registerSoundtrack(name: string, handler: () => void) {
         init();
 
-        state.soundtrackCollection[name] = new Soundtrack();
-        state.recordingSoundtrackName = name;
-
-        state.getCurrentlyRecordingSoundtrack().setMood(state.moods[MusicMood.Adventure])
+        state.soundtrackCollection[name] = new Soundtrack(handler);
+        state.soundtrackCollection[name].setMood(state.moods[MusicMood.Adventure])
     }
 
-    export function registerTrack(name: string, instrument: InstrumentType, role: TrackRole, playbackType: TrackPlayType) {
+    export function registerTrack(name: string, instrument: InstrumentType, role: TrackRole, playbackType: TrackPlayType, handler: ()=>void) {
         init();
 
-        const curr = state.getCurrentlyRecordingSoundtrack();
+        const curr = state.getCurrentSoundtrack();
         if (curr) {
             const track = new Track(curr, instrument, role, playbackType);
             curr.addTrack(name, track);
             state.recordingTrackName = name;
+            handler();
         }
     }
 
@@ -501,8 +500,7 @@ namespace soundtrack {
     export function changeKeyBySecret(diff: number) {
         init();
 
-        const st = state.isPlaying ? state.getCurrentlyPlayingSoundtrack()
-            : state.getCurrentlyRecordingSoundtrack();
+        const st = state.getCurrentSoundtrack()
 
         if (st) {
             st.changeKey(diff);
@@ -512,8 +510,7 @@ namespace soundtrack {
     export function setSoundtrackKeySecret(key: number) {
         init();
 
-        const st = state.isPlaying ? state.getCurrentlyPlayingSoundtrack()
-                    : state.getCurrentlyRecordingSoundtrack();
+        const st = state.getCurrentSoundtrack()
 
         if (st)
             st.setKey(key)
@@ -527,7 +524,7 @@ namespace soundtrack {
     }
     export function setSoundtrackMoodSecret(mood: MusicMood) {
         init();
-        const st = state.getCurrentlyRecordingSoundtrack();
+        const st = state.getCurrentSoundtrack();
         if (st)
             st.setMood(state.moods[mood])
     }
@@ -540,7 +537,7 @@ namespace soundtrack {
         game.currentScene().eventContext.registerFrameHandler(scene.PHYSICS_PRIORITY + 1, function() {
 
             if (state.isPlaying) {
-                state.getCurrentlyPlayingSoundtrack().playOnUpdate();
+                state.getCurrentSoundtrack().playOnUpdate();
             }
         })
     }

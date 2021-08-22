@@ -115,9 +115,8 @@ namespace soundtrack {
     //% block="soundtrack $name"
     //% group="Song"
     export function setSoundtrack(name: string, handler: () => void) {
-        registerSoundtrack(name)
-
-        handler();
+        console.log("We are registering: " + name)
+        registerSoundtrack(name, handler)
     }
 
     //% blockId=soundtrack_set_key
@@ -148,8 +147,7 @@ namespace soundtrack {
     //% expandableArgumentMode="toggle"
     //% group="Track"
     export function setTrack(name: string, instrument: number, role: number, t: number, handler: ()=>void) {
-        registerTrack(name, instrument, role, t);
-        handler();
+        registerTrack(name, instrument, role, t, handler);
     }
 
 
