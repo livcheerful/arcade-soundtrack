@@ -113,6 +113,11 @@ namespace musicUtils {
             return ret;
         }
 
+        getRandomNote(oct: number) {
+            const notes = this.getNotes(oct, 1);
+            return Math.pickRandom(notes);
+        }
+
         transpose(interval: number) {
             this.root = getNoteFromInterval(this.root, interval);
         }
