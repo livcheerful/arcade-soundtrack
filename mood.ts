@@ -62,7 +62,6 @@ namespace soundtrack {
         }
 
         getCurrentChord() {
-            console.log(this.chords)
             return this.chords[this.currentChordIdx]
         }
 
@@ -95,15 +94,15 @@ namespace soundtrack {
         }
 
         getDrumNotes(note: PixelNote): NoteWave[] {
-            const ys = this.getPixelsInCol(note.x, this.drumPattern);
+            const ys = this.getPixelsInCol(note.x % this.drumPattern.width, this.drumPattern);
             const notes = ys.map(y => (new NoteWave(y)))
             return notes;
         }
 
-        getPixelsInCol(x: number, img: Image) {
+        private getPixelsInCol(x: number, img: Image) {
             let yPixelPos = [];
             for (let y = 0; y < img.height; y++) {
-                if (img.getPixel(x, y)) {
+                if (img.getPixel(x, y) != 0) {
                     if (x == 0 || img.getPixel(x - 1, y) != img.getPixel(x, y)) {
                         // This is a fresh attack. add it
                         yPixelPos.push(img.height - y - 1);
@@ -125,7 +124,6 @@ namespace soundtrack {
                     return notes;
                 case PlayStyle.Octaves:
                     // Adventure uses octaves
-                    console.log("current chord : " + this.getCurrentChord().root)
                     const octs = musicUtils.arpeggiateMe([this.getCurrentChord().root], 4, 4);
                     const ret: NoteWave[] = []
                     octs.forEach((n, index) => {

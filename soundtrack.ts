@@ -18,13 +18,28 @@ namespace soundtrack {
                 const ampEnv = new envelopes.Envelope(volume + 4, volume, volume, 300);
                 const pitchEnv = new envelopes.Envelope(550 + 2, 550 - 2, 550, 0);
                 return envelopes.makeTrigger(100, 550, 5, volume, 0, ampEnv, pitchEnv)
+            case DrumSounds.Kick:
+                // const volume = 500;
+                const kickAmpEnv = new envelopes.Envelope(volume / 2, 0,  volume / 20, 0);
+                const kickPitchEnv = new envelopes.Envelope(10, 40, 0, 1000);
+                return envelopes.makeTrigger(160, 60, 3, 80, 80, kickAmpEnv, kickPitchEnv)
+            case DrumSounds.Snare:
+                const freq = 1200;
+                const duration = 80;
+                const waveForm = 5;
+
+                const snareAmpEnv = new envelopes.Envelope(10, 100, 20, 0);
+                const snarePitchEnv = new envelopes.Envelope(10, 10, 0, 100);
+
+                const trig = envelopes.makeTrigger(duration, freq, waveForm,
+            /*ampMod=*/80, /*pitchMod=*/80,
+                    snareAmpEnv, snarePitchEnv)
+            
             default:
                 // HiHat sound
                 const hhAmp = new envelopes.Envelope(volume + 4, volume, volume, 20);
                 const hhPitch = new envelopes.Envelope(440 + 2, 440 - 2, 440, 0);
-
                 return envelopes.makeTrigger(20, 440, 5, volume, 0, hhAmp, hhPitch)
-                
         }
     }
 
@@ -190,44 +205,50 @@ namespace soundtrack {
             
 
             for (let i = 0; i < notes.length; i++) {
-                const freq = notes[i].freq
+                let freq = notes[i].freq
                 let pitchEnv;
                 let ampEnv;
                 let waveForm;
                 let pitchMod = 2;
                 let noteLength = music.beat(note.pixelVal) / 2;
-                if (this.instrument == InstrumentType.Percussion) {
-                    const trig = getTriggerForDrum(notes[i].freq, vol);
-                    music.queuePlayInstructions2(0, trig);
-                } else {
-                    switch(this.instrument) {
-                        case InstrumentType.Bell:
-                            ampEnv = new envelopes.Envelope(vol + 10, vol, vol - 5, 50)
-                            pitchEnv = new envelopes.Envelope(freq, freq, freq, 0)
-                            waveForm = 3;
-                            noteLength = 100;
-                            break;
-                        case InstrumentType.Chip:
-                            ampEnv = new envelopes.Envelope(vol , vol, vol, 50)
-                            pitchEnv = new envelopes.Envelope(freq, freq, freq, 0)
-                            waveForm = 15;
-                            break;
-                        case InstrumentType.Brass:
-                            ampEnv = new envelopes.Envelope(vol + 5, vol -10, vol - 10, 10)
-                            pitchMod = 0;
-                            waveForm = 2;
-                            noteLength = music.beat(note.pixelVal) * .75;
-                            break;
-
-                        default:
-                            ampEnv = new envelopes.Envelope(vol, vol, vol, 10)
-                            pitchEnv = new envelopes.Envelope(freq+10, freq-10, freq, 10)
-                            waveForm = 1;
+                if (this.role == TrackRole.Rhythm) {
+                    if (this.instrument == InstrumentType.Percussion) {
+                        console.log("This is the drum sound: " + freq)
+                        const trig = getTriggerForDrum(freq, vol);
+                        music.queuePlayInstructions2(0, trig);
+                        continue;
+                    } else {
+                        freq = this.parent.mood.getCurrentChord().root;
                     }
+                } 
+                switch(this.instrument) {
+                    case InstrumentType.Bell:
+                        ampEnv = new envelopes.Envelope(vol + 10, vol, vol - 5, 50)
+                        pitchEnv = new envelopes.Envelope(freq, freq, freq, 0)
+                        waveForm = 3;
+                        noteLength = 100;
+                        break;
+                    case InstrumentType.Chip:
+                        ampEnv = new envelopes.Envelope(vol , vol, vol, 50)
+                        pitchEnv = new envelopes.Envelope(freq, freq, freq, 0)
+                        waveForm = 15;
+                        break;
+                    case InstrumentType.Brass:
+                        ampEnv = new envelopes.Envelope(vol + 5, vol -10, vol - 10, 10)
+                        pitchMod = 0;
+                        waveForm = 2;
+                        noteLength = music.beat(note.pixelVal) * .75;
+                        break;
 
-                    const trig = envelopes.makeTrigger(noteLength, freq, waveForm, vol, pitchMod, ampEnv, pitchEnv)
-                    music.queuePlayInstructions2(notes[i].offset, trig);
+                    default:
+                        ampEnv = new envelopes.Envelope(vol, vol, vol, 10)
+                        pitchEnv = new envelopes.Envelope(freq+10, freq-10, freq, 10)
+                        waveForm = 1;
                 }
+
+                const trig = envelopes.makeTrigger(noteLength, freq, waveForm, vol, pitchMod, ampEnv, pitchEnv)
+                music.queuePlayInstructions2(notes[i].offset, trig);
+                
             }
         }
 
@@ -390,17 +411,17 @@ namespace soundtrack {
                 . . . . . . . .
                 3 . . . . . . .
             `
-
+            const drumForChill = img`
+                7 . . . . . . . . . . . . . . .
+                . . . . . . . . . . . . . . . .
+                . . . . 3 . . . . . . . 3 . . .
+                3 . . 3 . . . . 3 . . 3 . . . .
+            `
             this.moods[MusicMood.Adventure] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.HarmonicMinor, "C Bb C C", bassForAdveture);
             this.moods[MusicMood.Adventure].setFlavorPlayStyle(PlayStyle.Octaves);
             this.moods[MusicMood.Chill] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.Major, "Dm7 Gm7 Cm7 C", bassForChill);
             this.moods[MusicMood.Chill].setFlavorPlayStyle(PlayStyle.Arpeggiated);
-            this.moods[MusicMood.Chill].setDrumPattern(img`
-3 3 3 3 3 3 . . 3 3 3 3 3 3 . . 
-. . . . . . . . . . . . . . . . 
-. . . . 3 . . . . . . . 3 . . . 
-3 . . 3 . . . . 3 . . 3 . . . . 
-`)
+            this.moods[MusicMood.Chill].setDrumPattern(drumForChill)
             this.moods[MusicMood.Magical] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.Minor, "Bb F Gm F", bassForChill, Note.Bb );
             this.moods[MusicMood.Magical].setFlavorPlayStyle(PlayStyle.Arpeggiated);
         }
