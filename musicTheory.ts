@@ -30,11 +30,7 @@ namespace musicUtils {
 
     export function intervalBetweenNotes(n1: number, n2: number) {
         const div = n2 / n1;
-        console.log("n2: " + n2)
-        console.log("n1: " + n1)
-        console.log("DV:" + div)
         const intv = Interval.Octave * (Math.log(div) / Math.log(2));
-        console.log("Interval: " + intv)
         return Interval.Octave * Math.log(div) / Math.log(2);
     }
 
@@ -51,6 +47,27 @@ namespace musicUtils {
         }
     }
 
+    export function arpeggiateMe(notes: Note[], howManyNotes: number, octavesToGo = 1 ): Note[] {
+        const ret: Note[] = [];
+        let nextNote = 0;
+        let goingUp = true;
+        for (let i = 0; i < howManyNotes; i++) {
+            ret.push(getNoteFromInterval( notes[nextNote % notes.length], Math.floor(nextNote / notes.length) * Interval.Octave))
+            if (goingUp && nextNote == (notes.length * octavesToGo) - 1) {
+                goingUp = false;
+            } else if (!goingUp && nextNote == 0) {
+                goingUp = true;
+            }
+
+            if (goingUp) {
+                nextNote++;
+            } else {
+                nextNote--;
+            }
+        }
+        return ret;
+    }
+
     export function getNoteFromInterval(root: number, interval: number): number {
         return (root * Math.pow(2, (interval / 12)));
     }
@@ -64,7 +81,7 @@ namespace musicUtils {
         return eachOctavesLowFreq.length;
     }
 
-    function getNoteInCorrectOctave(note: number, oct: number) {
+    export function getNoteInOctave(note: number, oct: number) {
         const currOct = getOctave(note);
         return getNoteFromInterval(note, (oct - currOct) * Interval.Octave);
     }
@@ -84,7 +101,7 @@ namespace musicUtils {
             case ScaleType.MinorPentatonic: scaleIntervals = [Interval.Perfect, Interval.AugmentedSecond, Interval.Whole, Interval.Whole, Interval.AugmentedSecond]; break;
         }
 
-        const baseNote = getNoteInCorrectOctave(key, baseOct);
+        const baseNote = getNoteInOctave(key, baseOct);
         const ret = [];
         for (let o = 0; o < numOct; o++) {
             let sum = 0;
@@ -104,7 +121,7 @@ namespace musicUtils {
             const ints = chordTypeToIntervals(this.cType);
             const ret = []
             
-            const baseNote = getNoteInCorrectOctave(this.root, oct)
+            const baseNote = getNoteInOctave(this.root, oct)
             for (let o = 0; o < num; o++) {
                 let acc = 0;
                 for (let step = 0; step < ints.length; step ++) {
@@ -113,6 +130,10 @@ namespace musicUtils {
                 }
             }
             return ret;
+        }
+
+        isMajor() {
+            return this.cType == ChordTypes.Maj;
         }
 
         getRandomNote(oct: number) {

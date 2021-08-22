@@ -12,7 +12,8 @@
         "soundtrack.ts",
         "api.ts",
         "envelopes.ts",
-        "musicTheory.ts"
+        "musicTheory.ts",
+        "mood.ts"
     ],
     "testFiles": [
         "test.ts"

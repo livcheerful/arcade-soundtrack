@@ -12,6 +12,12 @@ namespace soundtrack {
 
     }
 
+    export enum PlayStyle {
+        OneToOne,
+        Arpeggiated,
+        Octaves
+    }
+
     export class Motif {
         width: number;
         source: Image;
@@ -87,10 +93,11 @@ namespace soundtrack {
             const offset = this.motif.getNotePitchOffset(this.currentX);
             const pixels = this.motif.getNoteLengthInPixels(this.currentX)
 
+            this.currentX++;
             if (pixels == 0) {
                 return undefined
             }
-            return new PixelNote(offset, this.pixelsToMs(pixels), this.currentX++, this.playSpeedToPixelLength() );
+            return new PixelNote(offset, this.pixelsToMs(pixels), this.currentX, this.playSpeedToPixelLength() );
         }
 
         isDonePlaying() : boolean {
@@ -161,6 +168,7 @@ namespace soundtrack {
 
 
             this.currentMotifIdx = 0;
+            this.volume = 1;
             this.motifs = [];
             this.isDone = false;
             this.nextPlayTime = 0;
@@ -178,11 +186,13 @@ namespace soundtrack {
                 let ampEnv;
                 let waveForm;
                 let pitchMod = 2;
+                let noteLength = music.beat(note.pixelVal) / 2;
                 switch(this.instrument) {
                     case InstrumentType.Bell:
                         ampEnv = new envelopes.Envelope(vol + 10, vol, vol - 5, 50)
                         pitchEnv = new envelopes.Envelope(freq, freq, freq, 0)
                         waveForm = 3;
+                        noteLength = 100;
                         break;
                     case InstrumentType.Chip:
                         ampEnv = new envelopes.Envelope(vol , vol, vol, 50)
@@ -190,17 +200,18 @@ namespace soundtrack {
                         waveForm = 15;
                         break;
                     case InstrumentType.Brass:
-                        ampEnv = new envelopes.Envelope(vol + 5, vol -10, vol - 10, note.length)
+                        ampEnv = new envelopes.Envelope(vol + 5, vol -10, vol - 10, 10)
                         pitchMod = 0;
                         waveForm = 2;
+                        noteLength = music.beat(note.pixelVal) * .75;
                         break;
                     default:
-                        ampEnv = new envelopes.Envelope(vol, vol, vol, 50)
+                        ampEnv = new envelopes.Envelope(vol, vol, vol, 10)
                         pitchEnv = new envelopes.Envelope(freq+10, freq-10, freq, 10)
                         waveForm = 1;
                 }
 
-                const trig = envelopes.makeTrigger(note.length, freq, waveForm, vol, pitchMod, ampEnv, pitchEnv)
+                const trig = envelopes.makeTrigger(noteLength, freq, waveForm, vol, pitchMod, ampEnv, pitchEnv)
                 music.queuePlayInstructions2(notes[i].offset, trig);
             }
         }
@@ -250,120 +261,8 @@ namespace soundtrack {
             this.playbackType = type;
         }
     }
+    
 
-
-    export class Mood {
-        key: number;
-        beatVal: BeatFraction;
-        beatsPM: number;
-
-        scaleType: musicUtils.ScaleType;
-
-        chords: musicUtils.Chord[]; // In the correctkey.
-        currentChordIdx: number;
-        nextChordChangeTime: number;
-
-        bassNotes: Image; // array of notes. If there is a note there, play loud. Otherwise play random note in the current chord.
-        bassNotePixelEquals: BeatFraction;
-
-        // Pass in the chord progression in the key of C!
-        constructor(key: number, timeTop: number, timeBottom: number, scaleType: musicUtils.ScaleType, cChordProg: string, bassNotes: Image, bassEq: BeatFraction) {
-            this.key = key;
-            this.scaleType = scaleType;
-
-            this.bassNotes = bassNotes
-            this.bassNotePixelEquals = bassEq;
-
-            this.currentChordIdx = -1;
-            this.nextChordChangeTime = 0;
-
-            this.setTimeSignature(timeTop, timeBottom);
-            this.generateChordsForMood(cChordProg);
-
-        }
-
-        getNote(role: TrackRole, note: PixelNote): NoteWave[] {
-            switch (role) {
-                case TrackRole.Bass: return this.getBassNotes(note);
-                case TrackRole.Melody: return this.getMelodyNotes(note);
-                case TrackRole.Rhythm: return this.getDrumNotes(note);
-                case TrackRole.Flavor: return this.getFlavorNotes(note);
-            } 
-        }
-
-        getScale(bassOct: number, numOct: number) {
-            const scale = musicUtils.getScale(this.key, this.scaleType, bassOct, numOct);
-            console.log(scale)
-            return scale
-        }
-
-        update() {
-            if (this.nextChordChangeTime < game.runtime()) {
-                this.nextChordChangeTime += music.beat(this.beatVal) * this.beatsPM;
-                this.currentChordIdx = (this.currentChordIdx + 1) % this.chords.length;
-            }
-        }
-
-        getCurrentChord() {
-            return this.chords[this.currentChordIdx]
-        }
-
-        getBassNotes(note: PixelNote): NoteWave[] {
-            return [new NoteWave(this.getCurrentChord().getRandomNote(2))];
-        }
-
-        getMelodyNotes(note: PixelNote): NoteWave[] {
-            return [new NoteWave(this.getCurrentChord().getRandomNote(5))]
-        }
-
-        getDrumNotes(note: PixelNote): NoteWave[] {
-            return []
-        }
-
-        getFlavorNotes(note: PixelNote): NoteWave[] {
-            const off = note.pitchOffset
-            const scale = this.getScale(2, Math.floor(off  / 8) + 1);
-            return [new NoteWave(scale[off])]
-        }
-
-        updateKey(newKey: Note) {
-            this.transposeChords(this.key, newKey)
-        }
-
-        transposeChords(oldKey: Note, newKey: Note) {
-            const interval = musicUtils.intervalBetweenNotes(oldKey, newKey);
-
-            for (let c = 0; c <  this.chords.length; c++) {
-                this.chords[c].transpose(interval)
-            }
-
-            this.key = newKey;
-        }
-
-        generateChordsForMood(chordProg: string) {
-
-            const chordNames = chordProg.split(" ")
-
-            this.chords = [];
-            for (let id = 0; id < chordNames.length; id++) {
-                this.chords.push( musicUtils.makeChord(chordNames[id]) )
-            }
-
-            // Assuming the passed in progressions are in the key of C...
-            this.transposeChords(Note.C, this.key)
-        }
-
-        setTimeSignature(top: number, bottom: number) {
-            switch (bottom) {
-                case 4: this.beatVal = BeatFraction.Quarter; break;
-                case 8: this.beatVal = BeatFraction.Eighth; break;
-                case 16: this.beatVal = BeatFraction.Sixteenth; break
-                case 2: this.beatVal = BeatFraction.Half; break;
-            }
-
-            this.beatsPM = top;
-        }
-    }
 
     export class Soundtrack {
         tracks: {[key: string]:Track};
@@ -477,8 +376,12 @@ namespace soundtrack {
                 3 . . . . . . .
             `
 
-            this.moods[MusicMood.Adventure] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.HarmonicMinor, "C Bb C C", bassForAdveture, BeatFraction.Sixteenth);
-            this.moods[MusicMood.Chill] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.Major, "Dm7 Gm7 Cm7 C", bassForChill, BeatFraction.Eighth);
+            this.moods[MusicMood.Adventure] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.HarmonicMinor, "C Bb C C", bassForAdveture);
+            this.moods[MusicMood.Adventure].setFlavorPlayStyle(PlayStyle.Octaves);
+            this.moods[MusicMood.Chill] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.Major, "Dm7 Gm7 Cm7 C", bassForChill);
+            this.moods[MusicMood.Chill].setFlavorPlayStyle(PlayStyle.Arpeggiated);
+            this.moods[MusicMood.Magical] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.Minor, "Bb F Gm F", bassForChill, Note.Bb );
+            this.moods[MusicMood.Magical].setFlavorPlayStyle(PlayStyle.Arpeggiated);
         }
 
         getCurrentlyRecordingSoundtrack(): Soundtrack {
@@ -515,6 +418,8 @@ namespace soundtrack {
 
         state.soundtrackCollection[name] = new Soundtrack();
         state.recordingSoundtrackName = name;
+
+        state.getCurrentlyRecordingSoundtrack().setMood(state.moods[MusicMood.Adventure])
     }
 
     export function registerTrack(name: string, instrument: InstrumentType, role: TrackRole, playbackType: TrackPlayType) {

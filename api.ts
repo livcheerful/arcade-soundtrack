@@ -31,7 +31,9 @@ namespace soundtrack {
         //% block="Adventure"
         Adventure,
         //% block="Chill"
-        Chill
+        Chill,
+        //% block="Magical"
+        Magical
     }
 
     export enum TrackPlayType {
@@ -138,15 +140,15 @@ namespace soundtrack {
      *           TRACK
      ***********************************/
 
-    //% block="set track $name $instrument as $role $type"
+    //% block="set track $name $instrument as $role $t"
     //% handlerStatement
     //% instrument.shadow=soundtrack_instrument_picker
     //% role.shadow=soundtrack_track_role_picker
-    //% type.shadow=soundtrack_track_play_type
+    //% t.shadow=soundtrack_track_play_type
     //% expandableArgumentMode="toggle"
     //% group="Track"
-    export function setTrack(name: string, instrument: number, role: number, type: number, handler: ()=>void) {
-        registerTrack(name, instrument, role, type);
+    export function setTrack(name: string, instrument: number, role: number, t: number, handler: ()=>void) {
+        registerTrack(name, instrument, role, t);
         handler();
     }
 
