@@ -29,16 +29,20 @@ namespace soundtrack {
 
 
             this.setTimeSignature(timeTop, timeBottom);
-            this.generateChordsForMood(chordProg, chordProgKey);
-
-            this.currentChordIdx = this.chords.length;
-            this.nextChordChangeTime = 0;
+            this.setChords(chordProg, chordProgKey)
             this.drumPattern = img`
                 . . . .
                 2 3 2 3
                 . . 7 .
                 3 . . .
             `
+        }
+
+        setChords(chordProg: string, chordProgKey: Note) {
+            this.generateChordsForMood(chordProg, chordProgKey);
+
+            this.currentChordIdx = -1;
+            this.nextChordChangeTime = 0;
         }
 
         getNote(role: TrackRole, note: PixelNote): NoteWave[] {
@@ -57,7 +61,7 @@ namespace soundtrack {
 
         update() {
             if (this.nextChordChangeTime <= game.runtime()) {
-                this.nextChordChangeTime += music.beat(this.beatVal) * this.beatsPM;
+                this.nextChordChangeTime += music.beat(this.beatVal) * 4 * this.beatsPM;
                 this.currentChordIdx = (this.currentChordIdx + 1) % this.chords.length;
             }
         }

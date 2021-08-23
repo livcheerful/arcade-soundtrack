@@ -151,7 +151,7 @@ namespace soundtrack {
         }
 
         getPixelDuration() : number {
-            return music.beat(this.playSpeedToPixelLength())
+            return music.beat(this.playSpeedToPixelLength()) * 4
         }
 
         private pixelsToMs(px: number) {
@@ -233,7 +233,6 @@ namespace soundtrack {
                 let noteLength = music.beat(note.pixelVal) / 2;
 
                 if (this.role == TrackRole.Rhythm) {
-                    console.log("The drum num is: " + freq)
                     if (this.instrument == InstrumentType.Percussion) {
                         const trig = getTriggerForDrum(freq, vol);
                         music.queuePlayInstructions2(0, trig);
@@ -258,12 +257,13 @@ namespace soundtrack {
                         ampEnv = new envelopes.Envelope(vol + 5, vol -10, vol - 10, 10)
                         pitchMod = 0;
                         waveForm = 2;
-                        noteLength = music.beat(note.pixelVal) * .75;
+                        noteLength = music.beat(note.pixelVal)*4 * .75;
                         break;
 
                     default:
                         ampEnv = new envelopes.Envelope(vol, vol, vol, 10)
                         pitchEnv = new envelopes.Envelope(freq+10, freq-10, freq, 10)
+                        noteLength = music.beat(note.pixelVal) * 4 * .75;
                         waveForm = 1;
                 }
 
@@ -367,6 +367,7 @@ namespace soundtrack {
         isPlaying: boolean;
 
         soundtrackCollection: { [key:string]: Soundtrack};
+        currentMood: Mood;
         moods: Mood[];
 
         constructor() {
@@ -423,17 +424,27 @@ namespace soundtrack {
                 . . . . . . . . . . . . . . . .
                 a a 7 7 a a 7 7 a a 7 7 a a 7 7
             `
-
+            const bassForBlues = img`
+                . . . . . . . . . . . . . . . .
+                . . . . . . . . . . . . . . . .
+                . . . . . . . . . . . . . . . .
+                3 . . 3 7 . . 7 4 . . 4 3 . . 3
+            `
             this.moods[MusicMood.Adventure] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.HarmonicMinor, "C Bb C C", bassForAdveture);
             this.moods[MusicMood.Adventure].setFlavorPlayStyle(PlayStyle.Octaves);
             this.moods[MusicMood.Chill] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.Major, "Dm7 Gm7 Cm7 C", bassForChill);
-            this.moods[MusicMood.Chill].setFlavorPlayStyle(PlayStyle.Arpeggiated);
+            this.moods[MusicMood.Chill].setFlavorPlayStyle(PlayStyle.OneToOne);
             this.moods[MusicMood.Chill].setDrumPattern(drumForChill)
             this.moods[MusicMood.Magical] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.Minor, "Bb F Gm F", bassForChill, Note.Bb );
             this.moods[MusicMood.Magical].setFlavorPlayStyle(PlayStyle.Arpeggiated);
             this.moods[MusicMood.Free] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.Major, "C G Am F", bassForFree);
             this.moods[MusicMood.Free].setFlavorPlayStyle(PlayStyle.OneToOne);
             this.moods[MusicMood.Free].setDrumPlayStyle(DrumPlayStyle.OneToOne);
+            this.moods[MusicMood.Bluesy] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.Blues, "C F C C7 F F7 C C7 G F C G7", bassForBlues)
+            this.moods[MusicMood.Bluesy].setFlavorPlayStyle(PlayStyle.OneToOne)
+            this.moods[MusicMood.Bluesy].setDrumPlayStyle(DrumPlayStyle.OneToOne)
+
+            this.currentMood = this.moods[MusicMood.Adventure]
         }
 
         getCurrentSoundtrack(): Soundtrack {
@@ -503,6 +514,12 @@ namespace soundtrack {
         state.stopPlaySoundtrack();
     }
 
+    export function setChordsSecret(chords: string, key: Note) {
+        init();
+        
+        state.currentMood.setChords(chords, key)
+    }
+
     export function changeKeyBySecret(diff: number) {
         init();
 
@@ -531,8 +548,10 @@ namespace soundtrack {
     export function setSoundtrackMoodSecret(mood: MusicMood) {
         init();
         const st = state.getCurrentSoundtrack();
-        if (st)
+        if (st) {
             st.setMood(state.moods[mood])
+            state.currentMood = state.moods[mood];
+        }
     }
 
 

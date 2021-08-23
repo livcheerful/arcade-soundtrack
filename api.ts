@@ -36,6 +36,8 @@ namespace soundtrack {
         Magical,
         //% block="Free",
         Free,
+        //% block="Bluesy"
+        Bluesy
     }
 
     export enum TrackPlayType {
@@ -135,6 +137,14 @@ namespace soundtrack {
     //% group="Song"
     export function setSoundtrackMood(mood: number) {
         setSoundtrackMoodSecret(mood)
+    }
+
+    //% blockId=soundtrack_set_chords
+    //% block="set chords $chords in key $key"
+    //% key.fieldEditor="note"
+    //% group="Song"
+    export function setChords(chords: string, key: Note) {
+        setChordsSecret(chords, key);
     }
 
     /***********************************
