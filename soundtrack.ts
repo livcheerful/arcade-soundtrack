@@ -275,19 +275,24 @@ namespace soundtrack {
 
         reset() {
             this.isDone = false;
+            this.isPlaying = false;
         }
 
         playMotif(motif: Motif, speed: PlaySpeed) {
             this.currentMotif = new MotifPlayback(motif, speed);
             for (let x = 0; x < this.currentMotif.motif.width; x++) {
-                const notes = this.currentMotif.playNote();
-                if (notes) {
-                    for (let i = 0; i < notes.length; i++) {
-                        const note = notes[i];
-                        this.playNoteWithInstrument(note);
+                if (this.isPlaying) {
+                    const notes = this.currentMotif.playNote();
+                    if (notes) {
+                        for (let i = 0; i < notes.length; i++) {
+                            const note = notes[i];
+                            this.playNoteWithInstrument(note);
+                        }
                     }
+                    loops.pause(this.currentMotif.getPixelDuration())
+                } else {
+                    // It'd be nice if we could clean ourselves up...
                 }
-                loops.pause(this.currentMotif.getPixelDuration())
             }
         }
 
@@ -420,9 +425,9 @@ namespace soundtrack {
             `
             const bassForFree = img`
                 . . . . . . . . . . . . . . . .
+                . . 7 7 . . 7 7 . . a a . . a a
                 . . . . . . . . . . . . . . . .
-                . . . . . . . . . . . . . . . .
-                a a 7 7 a a 7 7 a a 7 7 a a 7 7
+                a a . . a a . . a a . . a a . .
             `
             const bassForBlues = img`
                 . . . . . . . . . . . . . . . .
@@ -461,6 +466,10 @@ namespace soundtrack {
         }
 
         startPlaySoundtrack(name: string) {
+            if (this.isPlaying) {
+                // Stop the current Soundtrack
+                this.getCurrentSoundtrack().reset();
+            }
             this.currentSoundtrackName = name
             this.isPlaying = true;
             this.getCurrentSoundtrack().handler();
@@ -493,7 +502,9 @@ namespace soundtrack {
 
     export function registerMotif(trackName:string,motif: Motif, speed: PlaySpeed) {
         const track = state.getCurrentSoundtrack().tracks[trackName];
-        track.playMotif(motif, speed);
+        if (track.isPlaying) {
+            track.playMotif(motif, speed);
+        }
     }
 
     export function createMotif (img: Image) {
@@ -504,7 +515,6 @@ namespace soundtrack {
 
     export function playSoundtrackSecret(name: string) {
         init();
-
         state.startPlaySoundtrack(name);
     }
 

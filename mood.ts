@@ -14,13 +14,13 @@ namespace soundtrack {
         flavorPlayStyle: PlayStyle;
 
         bassNotes: Image; // array of notes. If there is a note there, play loud. Otherwise play random note in the current chord.
-        bassNoteGenStyle: () => Note[];
+        bassNoteGenStyle: (n: Note[]) => Note[];
 
         drumPattern: Image;
         drumPlayStyle: DrumPlayStyle;
 
         // chordProgKey is the key the chord progression was written in. If you dont wanna pass it pass in your chords in the key of C 
-        constructor(key: number, timeTop: number, timeBottom: number, scaleType: musicUtils.ScaleType, chordProg: string, bassNotes: Image, chordProgKey = Note.C,) {
+        constructor(key: number, timeTop: number, timeBottom: number, scaleType: musicUtils.ScaleType, chordProg: string, bassNotes?: Image, chordProgKey = Note.C,) {
             this.key = key;
             this.scaleType = scaleType;
             this.flavorPlayStyle = PlayStyle.OneToOne;
@@ -88,10 +88,10 @@ namespace soundtrack {
                 }
                 return notes;
             } else if (this.bassNoteGenStyle) {
-                const notes = this.bassNoteGenStyle();
+                const notes = this.bassNoteGenStyle(this.getCurrentChord().getNotes(3, 4));
                 const nw = []
                 for (let n = 0; n < notes.length; n++) {
-                    nw.push(new NoteWave(notes[n], music.beat(note.pixelVal) * n))
+                    nw.push(new NoteWave(notes[n], music.beat(note.pixelVal)*4 * n))
                 }
                 return nw;
             } else {
