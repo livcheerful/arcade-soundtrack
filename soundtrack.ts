@@ -342,10 +342,13 @@ namespace soundtrack {
         }
 
         getTrackSumVol() : number {
-            let sum = 1;
+            let sum = 0;
             for (let name of this.trackNames) {
                 const track = this.tracks[name]
                 sum += track.volume;
+            }
+            if (sum == 0) {
+                sum = 1
             }
             return sum;
         }
@@ -543,9 +546,13 @@ namespace soundtrack {
 
     export function setTrackVolumeSecret(trackName: string, vol: number) {
         init();
-        const track = state.getCurrentSoundtrack().tracks[trackName];
-        if (track) 
-            track.setVolume(vol);
+        const st = state.getCurrentSoundtrack();
+        if (st) {
+            const track = st.tracks[trackName];
+            if (track)
+                track.setVolume(vol);
+
+        }
     }
     export function setSoundtrackMoodSecret(mood: MusicMood) {
         init();
