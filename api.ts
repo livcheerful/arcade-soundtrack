@@ -163,10 +163,10 @@ namespace soundtrack {
 
 
     //% blockId=soundtrack_set_volume
-    //% block="set track volume $vol"
+    //% block="set track $track volume $vol"
     //% group="Track"
-    export function setTrackVolume(vol: number) {
-        setTrackVolumeSecret(vol);
+    export function setTrackVolume(track: string, vol: number) {
+        setTrackVolumeSecret(track, vol);
     }
 
 

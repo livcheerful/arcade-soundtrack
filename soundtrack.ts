@@ -458,14 +458,6 @@ namespace soundtrack {
             return st;
         }
 
-        getCurrentlyRecordingTrack() {
-            const st = this.getCurrentSoundtrack()
-            if (st) {
-                return st.getTrack(this.recordingTrackName);
-            }
-            return undefined;
-        }
-
         startPlaySoundtrack(name: string) {
             if (this.isPlaying) {
                 // Stop the current Soundtrack
@@ -550,9 +542,9 @@ namespace soundtrack {
             st.setKey(key)
     }
 
-    export function setTrackVolumeSecret(vol: number) {
+    export function setTrackVolumeSecret(trackName: string, vol: number) {
         init();
-        const track = state.getCurrentlyRecordingTrack();
+        const track = state.getCurrentSoundtrack().tracks[trackName];
         if (track) 
             track.setVolume(vol);
     }
