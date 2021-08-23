@@ -358,6 +358,7 @@ namespace soundtrack {
 
         setMood(mood: Mood) {
             this.mood = mood;
+            this.mood.update();
         }
 
         playOnUpdate() {

@@ -119,7 +119,6 @@ namespace soundtrack {
     //% block="soundtrack $name"
     //% group="Song"
     export function setSoundtrack(name: string, handler: () => void) {
-        console.log("We are registering: " + name)
         registerSoundtrack(name, handler)
     }
 
