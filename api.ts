@@ -33,7 +33,9 @@ namespace soundtrack {
         //% block="Chill"
         Chill,
         //% block="Magical"
-        Magical
+        Magical,
+        //% block="Free",
+        Free,
     }
 
     export enum TrackPlayType {

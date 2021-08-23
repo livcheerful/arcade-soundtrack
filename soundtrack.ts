@@ -56,6 +56,11 @@ namespace soundtrack {
         Octaves
     }
 
+    export enum DrumPlayStyle {
+        OneToOne,
+        Pattern
+    }
+
     export class Motif {
         width: number;
         source: Image;
@@ -65,35 +70,32 @@ namespace soundtrack {
             this.source = img;
         }
 
-        getNotePitchOffset(x: number) {
-            const y = this.getBottomPixelY(x)
-            return y >= 0 ?  this.source.height - y :  y;
-        }
-
-        getNoteLengthInPixels(x: number) {
-            const y = this.getBottomPixelY(x);
-
-            // If this isn't a new note attack
-            if (x > 0 && this.source.getPixel(x-1, y) == this.source.getPixel(x, y))
-                return 0;
-
-            let count = 0;
-            for (let xoff = x; count < this.source.width; count++) {
-                if (this.source.getPixel(xoff, y) == 0) {
-                    break;
-                }
-                count++;
-            }
-            return count;
-        }
-
-        private getBottomPixelY(x: number) {
-            for (let y = this.source.height - 1; y >= 0; y--) {
-                if (this.source.getPixel(x, y) != 0) {
-                    return y;
+        getNotePitchOffset(x: number): number[] {
+            const rets = []
+            for (let y = 0; y < this.source.height; y++) {
+                const thisPix = this.source.getPixel(x, y)
+                if (thisPix != 0) {
+                    if (x == 0 || this.source.getPixel(x-1, y) != thisPix) {
+                        rets.push(this.source.height - y - 1)
+                    }
                 }
             }
-            return -1;
+            return rets;
+        }
+
+        getNoteLengthInPixels(x: number, ys: number[]) {
+            const lengths = ys.map( y => {
+                let count = 0;
+                for (let xoff = x; count < this.source.width; count++) {
+                    if (this.source.getPixel(xoff, y) == 0) {
+                        break;
+                    }
+                    count++;
+                }
+                return count;
+            })
+            
+            return lengths;
         }
     }
 
@@ -127,15 +129,21 @@ namespace soundtrack {
             this.currentX = 0;
         }
 
-        playNote(): PixelNote {
-            const offset = this.motif.getNotePitchOffset(this.currentX);
-            const pixels = this.motif.getNoteLengthInPixels(this.currentX)
+        playNote(): PixelNote[] {
+            const ys = this.motif.getNotePitchOffset(this.currentX);
+            const pixelLengths = this.motif.getNoteLengthInPixels(this.currentX, ys)
 
             this.currentX++;
-            if (pixels == 0) {
+            if (ys.length == 0 || pixelLengths.length == 0) {
                 return undefined
             }
-            return new PixelNote(offset, this.pixelsToMs(pixels), this.currentX, this.playSpeedToPixelLength() );
+
+            const pn = []
+            for (let note = 0; note < ys.length; note++) {
+                pn.push(new PixelNote(ys[note], this.pixelsToMs(pixelLengths[note]),this.currentX, this.playSpeedToPixelLength()))
+            }
+
+            return pn;
         }
 
         isDonePlaying() : boolean {
@@ -143,7 +151,6 @@ namespace soundtrack {
         }
 
         getPixelDuration() : number {
-            console.log("pixel duration is: " + music.beat(this.playSpeedToPixelLength()))
             return music.beat(this.playSpeedToPixelLength())
         }
 
@@ -156,7 +163,6 @@ namespace soundtrack {
                 case PlaySpeed.VerySlowly:
                     return BeatFraction.Whole
                 case PlaySpeed.Slowly:
-                    console.log("its a half Note")
                     return BeatFraction.Half
                 case PlaySpeed.Normal:
                     return BeatFraction.Quarter
@@ -225,7 +231,9 @@ namespace soundtrack {
                 let waveForm;
                 let pitchMod = 2;
                 let noteLength = music.beat(note.pixelVal) / 2;
+
                 if (this.role == TrackRole.Rhythm) {
+                    console.log("The drum num is: " + freq)
                     if (this.instrument == InstrumentType.Percussion) {
                         const trig = getTriggerForDrum(freq, vol);
                         music.queuePlayInstructions2(0, trig);
@@ -272,10 +280,13 @@ namespace soundtrack {
         playMotif(motif: Motif, speed: PlaySpeed) {
             this.currentMotif = new MotifPlayback(motif, speed);
             for (let x = 0; x < this.currentMotif.motif.width; x++) {
-                const note= this.currentMotif.playNote();
-                if (note)
-                    this.playNoteWithInstrument(note);
-                console.log("We're gonna pause this long:" + this.currentMotif.getPixelDuration());
+                const notes = this.currentMotif.playNote();
+                if (notes) {
+                    for (let i = 0; i < notes.length; i++) {
+                        const note = notes[i];
+                        this.playNoteWithInstrument(note);
+                    }
+                }
                 loops.pause(this.currentMotif.getPixelDuration())
             }
         }
@@ -406,6 +417,13 @@ namespace soundtrack {
                 . . . . 3 . . . . . . . 3 . . .
                 3 . . 3 . . . . 3 . . 3 . . . .
             `
+            const bassForFree = img`
+                . . . . . . . . . . . . . . . .
+                . . . . . . . . . . . . . . . .
+                . . . . . . . . . . . . . . . .
+                a a 7 7 a a 7 7 a a 7 7 a a 7 7
+            `
+
             this.moods[MusicMood.Adventure] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.HarmonicMinor, "C Bb C C", bassForAdveture);
             this.moods[MusicMood.Adventure].setFlavorPlayStyle(PlayStyle.Octaves);
             this.moods[MusicMood.Chill] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.Major, "Dm7 Gm7 Cm7 C", bassForChill);
@@ -413,6 +431,9 @@ namespace soundtrack {
             this.moods[MusicMood.Chill].setDrumPattern(drumForChill)
             this.moods[MusicMood.Magical] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.Minor, "Bb F Gm F", bassForChill, Note.Bb );
             this.moods[MusicMood.Magical].setFlavorPlayStyle(PlayStyle.Arpeggiated);
+            this.moods[MusicMood.Free] = new Mood(Note.C, 4, 4, musicUtils.ScaleType.Major, "C G Am F", bassForFree);
+            this.moods[MusicMood.Free].setFlavorPlayStyle(PlayStyle.OneToOne);
+            this.moods[MusicMood.Free].setDrumPlayStyle(DrumPlayStyle.OneToOne);
         }
 
         getCurrentSoundtrack(): Soundtrack {

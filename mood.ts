@@ -17,6 +17,7 @@ namespace soundtrack {
         bassNoteGenStyle: () => Note[];
 
         drumPattern: Image;
+        drumPlayStyle: DrumPlayStyle;
 
         // chordProgKey is the key the chord progression was written in. If you dont wanna pass it pass in your chords in the key of C 
         constructor(key: number, timeTop: number, timeBottom: number, scaleType: musicUtils.ScaleType, chordProg: string, bassNotes: Image, chordProgKey = Note.C,) {
@@ -70,7 +71,13 @@ namespace soundtrack {
                 const x = note.x % this.bassNotes.width;
 
                 const yPixelPos = this.getPixelsInCol(x, this.bassNotes);
-                const scale = musicUtils.getScale(this.getCurrentChord().root, this.getCurrentChord().isMajor() ? musicUtils.ScaleType.Major : musicUtils.ScaleType.HarmonicMinor, 2, this.computeNumberOctavesFromOffset(this.bassNotes.height));
+                const scale = musicUtils.getScale(
+                    this.getCurrentChord().root, 
+                    this.getCurrentChord().isMajor() 
+                    ? musicUtils.ScaleType.Major 
+                    : musicUtils.ScaleType.HarmonicMinor, 
+                    2, 
+                    this.computeNumberOctavesFromOffset(this.bassNotes.height));
                 const notes = []
                 for (let i = 0; i < yPixelPos.length; i++) {
                     notes.push(new NoteWave(scale[yPixelPos[i]]))
@@ -90,10 +97,15 @@ namespace soundtrack {
         }
 
         getMelodyNotes(note: PixelNote): NoteWave[] {
-            return [new NoteWave(this.getCurrentChord().getRandomNote(5))]
+            const chord = this.getCurrentChord()
+            const notes = chord.getNotes(4, this.computeNumberOctavesFromOffset(note.pitchOffset, chord.getNotes(2, 1)));
+            return [new NoteWave(notes[note.pitchOffset])]
         }
 
         getDrumNotes(note: PixelNote): NoteWave[] {
+            if (this.drumPlayStyle == DrumPlayStyle.OneToOne) {
+                return [new NoteWave(note.pitchOffset % 4)] // 4 because we have 4 drum sounds
+            }
             const ys = this.getPixelsInCol(note.x % this.drumPattern.width, this.drumPattern);
             const notes = ys.map(y => (new NoteWave(y)))
             return notes;
@@ -142,8 +154,9 @@ namespace soundtrack {
             this.transposeChords(this.key, newKey)
         }
 
-        computeNumberOctavesFromOffset(offset: number) {
-            return (Math.floor(offset / this.getScale(1, 1).length) + 1);
+        computeNumberOctavesFromOffset(offset: number, noteOptions?: number[]) {
+            const len = noteOptions ? noteOptions.length : this.getScale(1,1).length;
+            return (Math.floor(offset / len) + 1);
         }
 
         transposeChords(oldKey: Note, newKey: Note) {
@@ -184,6 +197,11 @@ namespace soundtrack {
 
         setDrumPattern(pattern: Image) {
             this.drumPattern = pattern;
+            this.drumPlayStyle = DrumPlayStyle.Pattern
+        }
+
+        setDrumPlayStyle(style: DrumPlayStyle) {
+            this.drumPlayStyle = style;
         }
     }
 }
