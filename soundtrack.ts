@@ -213,7 +213,9 @@ namespace soundtrack {
 
         startPlayingAHH() {
             do {
-                this.handler();
+                if (this.isPlaying) {
+                    this.handler();
+                }
             } while(this.playbackType == TrackPlayType.Loop && this.isPlaying)
             this.isDone = true;
         }
@@ -367,8 +369,6 @@ namespace soundtrack {
     }
 
     export class SoundtrackState {
-        recordingTrackName: string;
-
         currentSoundtrackName: string;
         isPlaying: boolean;
 
@@ -489,13 +489,12 @@ namespace soundtrack {
         if (curr) {
             const track = new Track(curr, instrument, role, playbackType, handler);
             curr.addTrack(name, track);
-            state.recordingTrackName = name;
         }
     }
 
-    export function registerMotif(trackName:string,motif: Motif, speed: PlaySpeed) {
+    export function registerMotif(trackName:string, motif: Motif, speed: PlaySpeed) {
         const track = state.getCurrentSoundtrack().tracks[trackName];
-        if (track.isPlaying) {
+        if (track && track.isPlaying) {
             track.playMotif(motif, speed);
         }
     }
